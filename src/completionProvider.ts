@@ -117,7 +117,7 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
       // will return instantly.
       const isStale = myRequestId !== this.requestId;
       if (isStale || token.isCancellationRequested) {
-        console.log(`Nerd Code Completion: [provider] result arrived late (${isStale ? 'stale' : 'token cancelled'}), re-triggering from cache`);
+        console.log(`Type Ahead: [provider] result arrived late (${isStale ? 'stale' : 'token cancelled'}), re-triggering from cache`);
         vscode.commands.executeCommand('editor.action.inlineSuggest.trigger');
         return null;
       }
@@ -125,13 +125,13 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
       return [new vscode.InlineCompletionItem(completion)];
     } catch (error: unknown) {
       this.consecutiveErrors++;
-      console.error('Nerd Code Completion: completion error', error);
+      console.error('Type Ahead: completion error', error);
 
       if (this.consecutiveErrors >= ClaudeCompletionProvider.MAX_CONSECUTIVE_ERRORS) {
         this.statusBar.setState('error');
         const message = error instanceof Error ? error.message : 'Unknown error';
         vscode.window.showWarningMessage(
-          `Nerd Code Completion: Multiple failures (${message}). Check your Nerd Code Completion configuration.`
+          `Type Ahead: Multiple failures (${message}). Check your Type Ahead configuration.`
         );
       } else {
         this.statusBar.setState('ready');

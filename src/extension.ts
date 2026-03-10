@@ -16,7 +16,7 @@ export function createBackend(config: AutocompleteConfig, apiKeyManager: ApiKeyM
     case 'anthropic':
       if (!config.model) {
         vscode.window.showErrorMessage(
-          'Nerd Code Completion: "model" is required for the Anthropic backend. Please set it in settings.'
+          'Type Ahead: "model" is required for the Anthropic backend. Please set it in settings.'
         );
       }
       return new AnthropicBackend(config, apiKeyManager);
@@ -25,12 +25,12 @@ export function createBackend(config: AutocompleteConfig, apiKeyManager: ApiKeyM
     case 'openai':
       if (!config.apiBaseUrl) {
         vscode.window.showErrorMessage(
-          `Nerd Code Completion: "apiBaseUrl" is required for the ${config.backend} backend. Please set it in settings.`
+          `Type Ahead: "apiBaseUrl" is required for the ${config.backend} backend. Please set it in settings.`
         );
       }
       if (!config.model) {
         vscode.window.showErrorMessage(
-          `Nerd Code Completion: "model" is required for the ${config.backend} backend. Please set it in settings.`
+          `Type Ahead: "model" is required for the ${config.backend} backend. Please set it in settings.`
         );
       }
       return new OpenAIBackend(config, apiKeyManager);
@@ -46,7 +46,7 @@ export function activate(context: vscode.ExtensionContext): void {
   keyManager = new ApiKeyManager(config.apiKeyHelper, config.apiKey);
   if (config.apiKeyHelper) {
     keyManager.warmUp().catch((err) => {
-      console.error('Nerd Code Completion: failed to warm up API key', err);
+      console.error('Type Ahead: failed to warm up API key', err);
     });
   }
 
@@ -61,13 +61,13 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(providerDisposable);
 
   const toggleCommand = vscode.commands.registerCommand(
-    'nerdCodeCompletion.toggle',
+    'typeAhead.toggle',
     async () => {
-      const vsConfig = vscode.workspace.getConfiguration('nerdCodeCompletion');
+      const vsConfig = vscode.workspace.getConfiguration('typeAhead');
       const current = vsConfig.get<boolean>('enabled', true);
       await vsConfig.update('enabled', !current, vscode.ConfigurationTarget.Global);
       vscode.window.showInformationMessage(
-        `Nerd Code Completion: ${!current ? 'Enabled' : 'Disabled'}`
+        `Type Ahead: ${!current ? 'Enabled' : 'Disabled'}`
       );
     }
   );
@@ -91,11 +91,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
       if (newConfig.apiKeyHelper && keyManager) {
         keyManager.warmUp().catch((err) => {
-          console.error('Nerd Code Completion: failed to warm up API key', err);
+          console.error('Type Ahead: failed to warm up API key', err);
         });
       }
 
-      console.log(`Nerd Code Completion: switched to ${newConfig.backend} backend`);
+      console.log(`Type Ahead: switched to ${newConfig.backend} backend`);
     } else {
       if (provider) {
         provider.updateConfig(newConfig);
@@ -107,7 +107,7 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   context.subscriptions.push(configWatcher);
 
-  console.log(`Nerd Code Completion: activated (${config.backend} backend)`);
+  console.log(`Type Ahead: activated (${config.backend} backend)`);
 }
 
 export function deactivate(): void {
@@ -121,5 +121,5 @@ export function deactivate(): void {
   }
   currentBackend = null;
   currentBackendType = null;
-  console.log('Nerd Code Completion: deactivated');
+  console.log('Type Ahead: deactivated');
 }

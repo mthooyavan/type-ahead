@@ -1,4 +1,4 @@
-# Nerd Code Completion
+# Type Ahead
 
 Inline code autocomplete for VS Code, powered by your choice of LLM backend. Get ghost-text suggestions as you type — accept with **Tab**, dismiss with **Escape**.
 
@@ -17,7 +17,7 @@ Best for: privacy-conscious users, offline work, or trying out the extension for
    ollama pull codellama:7b
    ```
 
-2. Open VS Code Settings (`Cmd+,` / `Ctrl+,`) and search for `nerdCodeCompletion`:
+2. Open VS Code Settings (`Cmd+,` / `Ctrl+,`) and search for `typeAhead`:
 
    | Setting | Value |
    |---|---|
@@ -126,27 +126,27 @@ The `OpenAI Compatible` backend works with **any server** that implements the `/
 
 ## All Settings
 
-Open VS Code Settings (`Cmd+,` / `Ctrl+,`) and search for `nerdCodeCompletion`.
+Open VS Code Settings (`Cmd+,` / `Ctrl+,`) and search for `typeAhead`.
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `nerdCodeCompletion.enabled` | boolean | `true` | Enable or disable the extension |
-| `nerdCodeCompletion.backend` | enum | `openai` | Backend: `OpenAI Compatible`, `Anthropic`, or `LiteLLM Gateway` |
-| `nerdCodeCompletion.model` | string | `""` | Model name (required for OpenAI/LiteLLM, optional for Anthropic) |
-| `nerdCodeCompletion.apiBaseUrl` | string | `""` | API base URL (required for OpenAI/LiteLLM, defaults to `https://api.anthropic.com` for Anthropic) |
-| `nerdCodeCompletion.apiKey` | string | `""` | Static API key. Leave empty for servers that need no auth (like local Ollama) |
-| `nerdCodeCompletion.apiKeyHelper` | string | `""` | Shell command that outputs an API key (overrides `apiKey` — see below) |
-| `nerdCodeCompletion.debounceMs` | number | `300` | Milliseconds to wait after you stop typing before requesting a completion |
-| `nerdCodeCompletion.contextLines` | number | `100` | Lines of code before and after the cursor to send as context |
-| `nerdCodeCompletion.cacheSize` | number | `50` | Number of completions to cache. Set to `0` to disable caching |
+| `typeAhead.enabled` | boolean | `true` | Enable or disable the extension |
+| `typeAhead.backend` | enum | `openai` | Backend: `OpenAI Compatible`, `Anthropic`, or `LiteLLM Gateway` |
+| `typeAhead.model` | string | `""` | Model name (required for OpenAI/LiteLLM, optional for Anthropic) |
+| `typeAhead.apiBaseUrl` | string | `""` | API base URL (required for OpenAI/LiteLLM, defaults to `https://api.anthropic.com` for Anthropic) |
+| `typeAhead.apiKey` | string | `""` | Static API key. Leave empty for servers that need no auth (like local Ollama) |
+| `typeAhead.apiKeyHelper` | string | `""` | Shell command that outputs an API key (overrides `apiKey` — see below) |
+| `typeAhead.debounceMs` | number | `300` | Milliseconds to wait after you stop typing before requesting a completion |
+| `typeAhead.contextLines` | number | `100` | Lines of code before and after the cursor to send as context |
+| `typeAhead.cacheSize` | number | `50` | Number of completions to cache. Set to `0` to disable caching |
 
 You can also set these in your `settings.json`:
 
 ```json
 {
-  "nerdCodeCompletion.backend": "openai",
-  "nerdCodeCompletion.model": "codellama:7b",
-  "nerdCodeCompletion.apiBaseUrl": "http://localhost:11434/v1"
+  "typeAhead.backend": "openai",
+  "typeAhead.model": "codellama:7b",
+  "typeAhead.apiBaseUrl": "http://localhost:11434/v1"
 }
 ```
 
@@ -162,14 +162,14 @@ For environments where API keys are short-lived (corporate SSO, rotating tokens,
 **Example: Using a custom CLI tool:**
 ```json
 {
-  "nerdCodeCompletion.apiKeyHelper": "my-company-cli get-api-token --service llm"
+  "typeAhead.apiKeyHelper": "my-company-cli get-api-token --service llm"
 }
 ```
 
 **Example: Using environment-specific scripts:**
 ```json
 {
-  "nerdCodeCompletion.apiKeyHelper": "/path/to/get-llm-key.sh"
+  "typeAhead.apiKeyHelper": "/path/to/get-llm-key.sh"
 }
 ```
 
@@ -188,7 +188,7 @@ Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`):
 
 | Command | Description |
 |---|---|
-| `Nerd Code Completion: Toggle On/Off` | Quickly enable or disable the extension |
+| `Type Ahead: Toggle On/Off` | Quickly enable or disable the extension |
 
 ---
 
@@ -198,10 +198,10 @@ The extension shows its status in the bottom-right of VS Code:
 
 | Icon | Meaning |
 |---|---|
-| `$(sparkle) Nerd` | Ready — waiting for you to type |
-| `$(loading~spin) Nerd` | Generating a completion |
-| `$(warning) Nerd` | Error — click to toggle, check Output panel for details |
-| `$(circle-slash) Nerd` | Disabled |
+| `$(sparkle) Type Ahead` | Ready — waiting for you to type |
+| `$(loading~spin) Type Ahead` | Generating a completion |
+| `$(warning) Type Ahead` | Error — click to toggle, check Output panel for details |
+| `$(circle-slash) Type Ahead` | Disabled |
 
 Click the status bar item to toggle the extension on/off.
 
@@ -211,16 +211,16 @@ Click the status bar item to toggle the extension on/off.
 
 ### No completions appear
 
-1. Check the status bar — is it showing "Nerd" or is it hidden?
+1. Check the status bar — is it showing "Type Ahead" or is it hidden?
 2. Open the **Output** panel (`Cmd+Shift+U`) and select **Extension Host** from the dropdown
-3. Look for log lines starting with `Nerd Code Completion:` — they show the full request/response flow:
+3. Look for log lines starting with `Type Ahead:` — they show the full request/response flow:
    ```
-   Nerd Code Completion: [auth] warming up API key at session start...
-   Nerd Code Completion: [auth] API key ready
-   Nerd Code Completion: [llm] POST http://localhost:11434/v1/chat/completions (model: codellama:7b)
-   Nerd Code Completion: [llm] auth: Bearer token set
-   Nerd Code Completion: [llm] response 200 in 342ms
-   Nerd Code Completion: [llm] completion: 28 chars
+   Type Ahead: [auth] warming up API key at session start...
+   Type Ahead: [auth] API key ready
+   Type Ahead: [llm] POST http://localhost:11434/v1/chat/completions (model: codellama:7b)
+   Type Ahead: [llm] auth: Bearer token set
+   Type Ahead: [llm] response 200 in 342ms
+   Type Ahead: [llm] completion: 28 chars
    ```
 
 ### Completions are slow

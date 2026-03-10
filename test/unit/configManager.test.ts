@@ -34,7 +34,7 @@ describe('ConfigManager', () => {
     });
 
     it('reads custom settings from VS Code config', () => {
-      setMockConfig('nerdCodeCompletion', {
+      setMockConfig('typeAhead', {
         enabled: false,
         backend: 'anthropic',
         debounceMs: 500,
@@ -53,7 +53,7 @@ describe('ConfigManager', () => {
     });
 
     it('trims apiBaseUrl whitespace', () => {
-      setMockConfig('nerdCodeCompletion', {
+      setMockConfig('typeAhead', {
         apiBaseUrl: '  http://localhost:11434/v1  ',
       });
       const config = getConfig();
@@ -125,10 +125,10 @@ describe('ConfigManager', () => {
   });
 
   describe('onConfigChange()', () => {
-    it('calls callback when nerdCodeCompletion config changes', () => {
+    it('calls callback when typeAhead config changes', () => {
       const callback = sinon.stub();
       const disposable = onConfigChange(callback);
-      fireConfigChange('nerdCodeCompletion');
+      fireConfigChange('typeAhead');
       assert.equal(callback.callCount, 1);
       disposable.dispose();
     });

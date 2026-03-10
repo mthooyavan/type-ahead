@@ -1,9 +1,9 @@
 {
-  "name": "nerd-code-completion",
-  "displayName": "Nerd Code Completion",
+  "name": "type-ahead",
+  "displayName": "Type Ahead",
   "description": "Inline code autocomplete powered by Anthropic, OpenAI-compatible LLMs (Ollama, vLLM, LM Studio), or LiteLLM Gateway",
   "version": "0.3.0",
-  "publisher": "nerd-community",
+  "publisher": "type-ahead",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -17,14 +17,14 @@
   "main": "./dist/extension.js",
   "contributes": {
     "configuration": {
-      "title": "Nerd Code Completion",
+      "title": "Type Ahead",
       "properties": {
-        "nerdCodeCompletion.enabled": {
+        "typeAhead.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable or disable inline autocomplete"
         },
-        "nerdCodeCompletion.backend": {
+        "typeAhead.backend": {
           "type": "string",
           "default": "openai",
           "enum": ["openai", "anthropic", "litellm"],
@@ -35,41 +35,41 @@
           ],
           "description": "Which backend to use for completions"
         },
-        "nerdCodeCompletion.model": {
+        "typeAhead.model": {
           "type": "string",
           "default": "",
           "description": "Model name. For Anthropic: empty uses ANTHROPIC_SMALL_FAST_MODEL or claude-haiku-4-5. For OpenAI/LiteLLM: required (e.g., 'codellama:7b', 'gpt-4o-mini')"
         },
-        "nerdCodeCompletion.apiBaseUrl": {
+        "typeAhead.apiBaseUrl": {
           "type": "string",
           "default": "",
           "description": "Base URL for the API. Required for OpenAI/LiteLLM (e.g., http://localhost:11434/v1). For Anthropic: defaults to https://api.anthropic.com"
         },
-        "nerdCodeCompletion.apiKey": {
+        "typeAhead.apiKey": {
           "type": "string",
           "default": "",
           "description": "Static API key. Overridden by apiKeyHelper if set. Leave empty for local servers like Ollama that need no auth"
         },
-        "nerdCodeCompletion.apiKeyHelper": {
+        "typeAhead.apiKeyHelper": {
           "type": "string",
           "default": "",
           "description": "Shell command that outputs an API key on stdout (e.g., 'my-tool get-api-key'). Overrides apiKey when set. Key is generated on IDE open and refreshed on auth errors"
         },
-        "nerdCodeCompletion.debounceMs": {
+        "typeAhead.debounceMs": {
           "type": "number",
           "default": 300,
           "minimum": 100,
           "maximum": 2000,
           "description": "Debounce delay in milliseconds before triggering completion"
         },
-        "nerdCodeCompletion.contextLines": {
+        "typeAhead.contextLines": {
           "type": "number",
           "default": 100,
           "minimum": 10,
           "maximum": 500,
           "description": "Number of lines of context before and after cursor to include"
         },
-        "nerdCodeCompletion.cacheSize": {
+        "typeAhead.cacheSize": {
           "type": "number",
           "default": 50,
           "minimum": 0,
@@ -80,8 +80,8 @@
     },
     "commands": [
       {
-        "command": "nerdCodeCompletion.toggle",
-        "title": "Nerd Code Completion: Toggle On/Off"
+        "command": "typeAhead.toggle",
+        "title": "Type Ahead: Toggle On/Off"
       }
     ]
   },

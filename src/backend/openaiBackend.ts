@@ -51,40 +51,40 @@ export class OpenAIBackend implements CompletionBackend {
         stop: ['<NO_COMPLETION/>'],
       });
 
-      console.log(`Nerd Code Completion: [llm] POST ${url} (model: ${model})`);
+      console.log(`Type Ahead: [llm] POST ${url} (model: ${model})`);
       const startTime = Date.now();
       let response = await this.doFetch(url, body);
       const elapsed = Date.now() - startTime;
-      console.log(`Nerd Code Completion: [llm] response ${response.status} in ${elapsed}ms`);
+      console.log(`Type Ahead: [llm] response ${response.status} in ${elapsed}ms`);
 
       if (response.status === 401 || response.status === 403) {
-        console.log(`Nerd Code Completion: [llm] auth error (${response.status}), refreshing API key and retrying...`);
+        console.log(`Type Ahead: [llm] auth error (${response.status}), refreshing API key and retrying...`);
         await this.keyManager.refreshKey();
         const retryStart = Date.now();
         response = await this.doFetch(url, body);
-        console.log(`Nerd Code Completion: [llm] retry response ${response.status} in ${Date.now() - retryStart}ms`);
+        console.log(`Type Ahead: [llm] retry response ${response.status} in ${Date.now() - retryStart}ms`);
       }
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => '');
         const errMsg = `API error ${response.status}: ${errorText || response.statusText}`;
-        console.error(`Nerd Code Completion: [llm] ${errMsg}`);
+        console.error(`Type Ahead: [llm] ${errMsg}`);
         throw new Error(errMsg);
       }
 
       const data = (await response.json()) as OpenAIChatResponse;
       const content = data.choices?.[0]?.message?.content;
       if (!content) {
-        console.log('Nerd Code Completion: [llm] empty completion returned');
+        console.log('Type Ahead: [llm] empty completion returned');
         return null;
       }
 
       const processed = postProcess(content);
-      console.log(`Nerd Code Completion: [llm] completion: ${processed ? processed.length + ' chars' : 'null (filtered)'}`);
+      console.log(`Type Ahead: [llm] completion: ${processed ? processed.length + ' chars' : 'null (filtered)'}`);
       return processed;
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error(`Nerd Code Completion: [llm] request failed: ${msg}`);
+      console.error(`Type Ahead: [llm] request failed: ${msg}`);
       throw error;
     }
   }
@@ -97,7 +97,7 @@ export class OpenAIBackend implements CompletionBackend {
     if (apiKey) {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
-    console.log(`Nerd Code Completion: [llm] auth: ${apiKey ? 'Bearer token set' : 'no auth'}`);
+    console.log(`Type Ahead: [llm] auth: ${apiKey ? 'Bearer token set' : 'no auth'}`);
     return fetch(url, { method: 'POST', headers, body });
   }
 

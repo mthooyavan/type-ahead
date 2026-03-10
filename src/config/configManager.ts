@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 const DEFAULT_ANTHROPIC_MODEL = 'claude-haiku-4-5';
 const DEFAULT_ANTHROPIC_BASE_URL = 'https://api.anthropic.com';
-const CONFIG_SECTION = 'nerdCodeCompletion';
+const CONFIG_SECTION = 'typeAhead';
 
 export type BackendType = 'openai' | 'anthropic' | 'litellm';
 
