@@ -99,6 +99,28 @@
       {
         "command": "typeAhead.toggle",
         "title": "Type Ahead: Toggle On/Off"
+      },
+      {
+        "command": "typeAhead.acceptWord",
+        "title": "Type Ahead: Accept Next Word"
+      },
+      {
+        "command": "typeAhead.acceptLine",
+        "title": "Type Ahead: Accept Next Line"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "typeAhead.acceptWord",
+        "key": "ctrl+right",
+        "mac": "cmd+right",
+        "when": "inlineSuggestionVisible"
+      },
+      {
+        "command": "typeAhead.acceptLine",
+        "key": "ctrl+shift+right",
+        "mac": "cmd+shift+right",
+        "when": "inlineSuggestionVisible"
       }
     ]
   },

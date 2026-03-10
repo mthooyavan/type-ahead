@@ -16,6 +16,8 @@ export function resetMockConfig(): void {
 const configChangeListeners: Array<(e: { affectsConfiguration: (section: string) => boolean }) => void> = [];
 
 export const workspace = {
+  textDocuments: [] as any[],
+  onDidChangeTextDocument: () => ({ dispose: () => {} }),
   getConfiguration(section: string) {
     const values = configValues[section] || {};
     return {
@@ -48,6 +50,7 @@ export function fireConfigChange(section: string): void {
 }
 
 export const window = {
+  activeTextEditor: null as any,
   showInformationMessage: async (_message: string) => undefined,
   showErrorMessage: async (_message: string) => undefined,
   showWarningMessage: async (_message: string) => undefined,
@@ -75,6 +78,7 @@ export const commands = {
   registerCommand: (_command: string, _callback: (...args: unknown[]) => unknown) => ({
     dispose: () => {},
   }),
+  executeCommand: async (_command: string, ..._args: unknown[]) => undefined,
 };
 
 export enum ConfigurationTarget {
@@ -121,6 +125,27 @@ export class Position {
 
 export class Range {
   constructor(public start: Position, public end: Position) {}
+}
+
+export enum SymbolKind {
+  File = 0,
+  Module = 1,
+  Namespace = 2,
+  Package = 3,
+  Class = 4,
+  Method = 5,
+  Property = 6,
+  Field = 7,
+  Constructor = 8,
+  Enum = 9,
+  Interface = 10,
+  Function = 11,
+  Variable = 12,
+  Constant = 13,
+  String = 14,
+  Number = 15,
+  Boolean = 16,
+  Array = 17,
 }
 
 export class Uri {

@@ -5,6 +5,7 @@ import { OpenAIBackend } from './backend/openaiBackend';
 import { AnthropicBackend } from './backend/anthropicBackend';
 import { ClaudeCompletionProvider } from './completionProvider';
 import { ApiKeyManager } from './auth/apiKeyManager';
+import { registerPartialAcceptCommands } from './partialAccept';
 
 let provider: ClaudeCompletionProvider | null = null;
 let currentBackend: CompletionBackend | null = null;
@@ -59,6 +60,17 @@ export function activate(context: vscode.ExtensionContext): void {
     provider
   );
   context.subscriptions.push(providerDisposable);
+
+  // Register partial acceptance commands (accept word / accept line)
+  registerPartialAcceptCommands(context, () => provider?.getLastCompletion() ?? null);
+
+  // Invalidate cache when documents change
+  const docChangeListener = vscode.workspace.onDidChangeTextDocument((e) => {
+    if (provider && e.document.uri.scheme === 'file' && e.contentChanges.length > 0) {
+      provider.onDocumentChanged(e.document.uri.fsPath);
+    }
+  });
+  context.subscriptions.push(docChangeListener);
 
   const toggleCommand = vscode.commands.registerCommand(
     'typeAhead.toggle',

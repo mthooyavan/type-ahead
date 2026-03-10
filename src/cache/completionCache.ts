@@ -27,6 +27,15 @@ export class CompletionCache {
     this.cache.set(key, value);
   }
 
+  invalidateFile(filePath: string): void {
+    const prefix = `${filePath}::`;
+    for (const key of [...this.cache.keys()]) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
   clear(): void {
     this.cache.clear();
   }

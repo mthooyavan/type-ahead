@@ -36,6 +36,96 @@ export function postProcess(raw: string): string | null {
   return cleaned;
 }
 
+/**
+ * Remove overlap between the start of a completion and the end of the prefix.
+ * Prevents duplicate code when the LLM repeats what the user already typed.
+ * E.g., prefix ends with "op." and completion starts with "op.create_index("
+ * → trim to "create_index("
+ */
+export function removePrefixOverlap(completion: string, prefix: string): string {
+  if (!completion || !prefix) {
+    return completion;
+  }
+
+  // Get the last line of the prefix (what the user typed on the current line)
+  const lastNewline = prefix.lastIndexOf('\n');
+  const currentLinePrefix = lastNewline >= 0 ? prefix.slice(lastNewline + 1) : prefix;
+  const trimmedLinePrefix = currentLinePrefix.trimStart();
+
+  if (!trimmedLinePrefix) {
+    return completion;
+  }
+
+  // Check if the completion starts with the current line prefix text.
+  // Try from longest match to shortest, but require at least 2 chars
+  // to avoid false positives on single-character matches.
+  const completionTrimmed = completion.trimStart();
+  for (let len = trimmedLinePrefix.length; len >= 2; len--) {
+    const prefixTail = trimmedLinePrefix.slice(-len);
+    if (completionTrimmed.startsWith(prefixTail)) {
+      return completionTrimmed.slice(len);
+    }
+  }
+
+  return completion;
+}
+
+/**
+ * Remove overlap between the end of a completion and the beginning of the suffix.
+ * Prevents duplicate code when the LLM repeats what already exists after the cursor.
+ */
+export function removeSuffixOverlap(completion: string, suffix: string): string {
+  if (!completion || !suffix) {
+    return completion;
+  }
+
+  // Find the longest suffix of `completion` that matches a prefix of `suffix`
+  const maxCheck = Math.min(completion.length, suffix.length);
+  let overlapLen = 0;
+
+  for (let len = 1; len <= maxCheck; len++) {
+    const completionTail = completion.slice(-len);
+    const suffixHead = suffix.slice(0, len);
+    if (completionTail === suffixHead) {
+      overlapLen = len;
+    }
+  }
+
+  if (overlapLen > 0) {
+    return completion.slice(0, -overlapLen);
+  }
+
+  return completion;
+}
+
+/**
+ * Normalize indentation style only (tabs↔spaces conversion).
+ * Does NOT adjust indent depth — the LLM sees the surrounding code context
+ * and returns correctly indented completions. Re-computing indent levels
+ * from the cursor position destroys correct indentation for continuation
+ * lines, method chains, function arguments, etc.
+ */
+export function normalizeIndentation(
+  completion: string,
+  _cursorLineIndent: string,
+  useTabs: boolean,
+  tabSize: number
+): string {
+  if (useTabs) {
+    // Convert spaces to tabs
+    return completion.replace(/^( +)/gm, (match) => {
+      const tabs = Math.floor(match.length / tabSize);
+      const remainingSpaces = match.length % tabSize;
+      return '\t'.repeat(tabs) + ' '.repeat(remainingSpaces);
+    });
+  } else {
+    // Convert tabs to spaces
+    return completion.replace(/^(\t+)/gm, (match) => {
+      return ' '.repeat(match.length * tabSize);
+    });
+  }
+}
+
 function stripCodeFences(text: string): string {
   const lines = text.split('\n');
 

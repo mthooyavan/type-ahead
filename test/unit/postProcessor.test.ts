@@ -1,5 +1,5 @@
 import { strict as assert } from 'assert';
-import { postProcess } from '../../src/prompt/postProcessor';
+import { postProcess, removePrefixOverlap, removeSuffixOverlap, normalizeIndentation } from '../../src/prompt/postProcessor';
 
 describe('PostProcessor', () => {
   describe('postProcess()', () => {
@@ -101,6 +101,104 @@ describe('PostProcessor', () => {
     it('preserves indentation in multiline completions', () => {
       const input = '    if (x > 0) {\n        return x;\n    }';
       assert.equal(postProcess(input), '    if (x > 0) {\n        return x;\n    }');
+    });
+  });
+
+  describe('removeSuffixOverlap()', () => {
+    it('removes overlapping suffix', () => {
+      assert.equal(removeSuffixOverlap('return x;\n}', '\n}'), 'return x;');
+    });
+
+    it('returns completion unchanged when no overlap', () => {
+      assert.equal(removeSuffixOverlap('return x;', '\nconst y = 1;'), 'return x;');
+    });
+
+    it('handles single-character overlap', () => {
+      assert.equal(removeSuffixOverlap('hello)', ')'), 'hello');
+    });
+
+    it('handles full overlap (completion equals suffix start)', () => {
+      assert.equal(removeSuffixOverlap('abc', 'abcdef'), '');
+    });
+
+    it('returns completion when suffix is empty', () => {
+      assert.equal(removeSuffixOverlap('return x;', ''), 'return x;');
+    });
+
+    it('returns completion when completion is empty', () => {
+      assert.equal(removeSuffixOverlap('', '\n}'), '');
+    });
+
+    it('handles multi-line overlap', () => {
+      assert.equal(
+        removeSuffixOverlap('x + y;\n  return result;\n}', '\n  return result;\n}'),
+        'x + y;'
+      );
+    });
+
+    it('removes single-char overlap when last char matches', () => {
+      // 'b' at end of 'xab' matches 'b' at start of 'bay'
+      assert.equal(removeSuffixOverlap('xab', 'bay'), 'xa');
+    });
+
+    it('does not remove when no chars match', () => {
+      assert.equal(removeSuffixOverlap('xyz', 'abc'), 'xyz');
+    });
+  });
+
+  describe('removePrefixOverlap()', () => {
+    it('removes prefix that LLM repeated', () => {
+      assert.equal(removePrefixOverlap('op.create_index(', '    op.'), 'create_index(');
+    });
+
+    it('removes full current line prefix', () => {
+      assert.equal(removePrefixOverlap('This is a test', 'line1\nThis '), 'is a test');
+    });
+
+    it('returns completion unchanged when no overlap', () => {
+      assert.equal(removePrefixOverlap('create_index(', '    op.'), 'create_index(');
+    });
+
+    it('handles empty prefix', () => {
+      assert.equal(removePrefixOverlap('hello', ''), 'hello');
+    });
+
+    it('handles empty completion', () => {
+      assert.equal(removePrefixOverlap('', 'some prefix'), '');
+    });
+
+    it('does not remove single-char overlap (too short to be reliable)', () => {
+      assert.equal(removePrefixOverlap('x + y', 'const x'), 'x + y');
+    });
+
+    it('works with multi-line prefix (uses last line)', () => {
+      assert.equal(removePrefixOverlap('result = getValue()', 'line1\nline2\nresult'), ' = getValue()');
+    });
+  });
+
+  describe('normalizeIndentation()', () => {
+    it('preserves indentation when file uses spaces (no-op)', () => {
+      const completion = 'if (x) {\n    return x;\n}';
+      assert.equal(normalizeIndentation(completion, '    ', false, 4), completion);
+    });
+
+    it('converts spaces to tabs when file uses tabs', () => {
+      const completion = 'if (x) {\n    return x;\n}';
+      const result = normalizeIndentation(completion, '\t', true, 4);
+      assert.equal(result, 'if (x) {\n\treturn x;\n}');
+    });
+
+    it('converts tabs to spaces when file uses spaces', () => {
+      const completion = 'if (x) {\n\treturn x;\n}';
+      const result = normalizeIndentation(completion, '    ', false, 4);
+      assert.equal(result, 'if (x) {\n    return x;\n}');
+    });
+
+    it('preserves LLM indentation depth (does not adjust levels)', () => {
+      // LLM returns 8-space indented args — normalizer should NOT change this
+      const completion = 'op.create_index(\n        op.f("name"),\n    )';
+      const result = normalizeIndentation(completion, '    ', false, 4);
+      assert.equal(result, completion);
     });
   });
 });

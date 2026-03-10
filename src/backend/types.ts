@@ -1,4 +1,5 @@
 import { AutocompleteConfig } from '../config/configManager';
+import { RelatedFileContext } from '../context/types';
 
 export interface CompletionRequest {
   prefix: string;
@@ -9,6 +10,7 @@ export interface CompletionRequest {
   cursorLine: number;
   cursorColumn: number;
   systemPrompt: string;
+  relatedFiles?: RelatedFileContext[];
 }
 
 export interface CompletionBackend {

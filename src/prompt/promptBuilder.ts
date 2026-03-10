@@ -8,6 +8,7 @@ Rules:
 - Complete the current statement or expression naturally
 - If the completion is a multi-line block, include appropriate indentation
 - Do not repeat code that already exists before or after the cursor
+- Use the related files section (if present) to understand available functions, types, and imports
 - If you cannot determine a useful completion, output exactly: <NO_COMPLETION/>`;
 
 export function buildSystemPrompt(customInstructions: string): string {
@@ -21,7 +22,19 @@ ${customInstructions}`;
 }
 
 export function buildPrompt(context: CodeContext): string {
-  return `File: ${context.fileName} (${context.language})
+  let prompt = '';
 
-${context.prefix}<CURSOR/>${context.suffix}`;
+  // Include related files context if available
+  if (context.relatedFiles && context.relatedFiles.length > 0) {
+    prompt += 'Related files (for reference — do not repeat this code):\n\n';
+    for (const rf of context.relatedFiles) {
+      prompt += `--- ${rf.fileName} (${rf.language}) ---\n${rf.snippet}\n\n`;
+    }
+    prompt += '---\n\n';
+  }
+
+  prompt += `File: ${context.fileName} (${context.language})\n\n`;
+  prompt += `${context.prefix}<CURSOR/>${context.suffix}`;
+
+  return prompt;
 }

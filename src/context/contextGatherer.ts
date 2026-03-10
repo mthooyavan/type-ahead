@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { CodeContext } from './types';
+import { gatherRelatedFiles } from './relatedFilesGatherer';
 
 export function gatherContext(
   document: vscode.TextDocument,
@@ -37,6 +38,8 @@ export function gatherContext(
   const filePath = document.uri.fsPath;
   const fileName = path.basename(filePath);
 
+  const relatedFiles = gatherRelatedFiles(filePath);
+
   return {
     prefix,
     suffix,
@@ -45,5 +48,6 @@ export function gatherContext(
     filePath,
     cursorLine,
     cursorColumn,
+    relatedFiles,
   };
 }
