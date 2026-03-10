@@ -1,0 +1,88 @@
+{
+  "name": "claude-autocomplete",
+  "displayName": "Claude Autocomplete",
+  "description": "Inline code autocomplete powered by Claude, using Claude Code's existing configuration",
+  "version": "0.1.0",
+  "publisher": "anthropic-community",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Claude Autocomplete",
+      "properties": {
+        "claudeAutocomplete.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable Claude inline autocomplete"
+        },
+        "claudeAutocomplete.model": {
+          "type": "string",
+          "default": "",
+          "description": "Model to use for completions. Leave empty to use ANTHROPIC_SMALL_FAST_MODEL env var or claude-haiku-4-5"
+        },
+        "claudeAutocomplete.debounceMs": {
+          "type": "number",
+          "default": 300,
+          "minimum": 100,
+          "maximum": 2000,
+          "description": "Debounce delay in milliseconds before triggering completion"
+        },
+        "claudeAutocomplete.contextLines": {
+          "type": "number",
+          "default": 100,
+          "minimum": 10,
+          "maximum": 500,
+          "description": "Number of lines of context before and after cursor to include"
+        },
+        "claudeAutocomplete.cacheSize": {
+          "type": "number",
+          "default": 50,
+          "minimum": 0,
+          "maximum": 500,
+          "description": "Number of completions to cache (0 to disable)"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "claudeAutocomplete.toggle",
+        "title": "Claude Autocomplete: Toggle On/Off"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "test": "mocha --require ts-node/register 'test/unit/**/*.test.ts'",
+    "test:integration": "mocha --require ts-node/register --timeout 10000 'test/integration/**/*.test.ts'",
+    "test:e2e": "node test/e2e/runTests.js",
+    "test:all": "npm run test && npm run test:integration",
+    "lint": "tsc --noEmit",
+    "vscode:prepublish": "npm run build -- --production"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "@types/sinon": "^17.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^2.3.0",
+    "esbuild": "^0.20.0",
+    "mocha": "^10.0.0",
+    "sinon": "^17.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.72",
+    "lru-cache": "^11.0.0"
+  }
+}
