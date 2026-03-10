@@ -69,6 +69,7 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
     try {
       await this.debounce(this.config.debounceMs, token);
     } catch {
+      console.log('Nerd Code Completion: [provider] cancelled during debounce');
       return null;
     }
 

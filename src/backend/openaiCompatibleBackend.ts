@@ -125,8 +125,11 @@ export class OpenAICompatibleBackend implements CompletionBackend {
       return processed;
     } catch (error: unknown) {
       if (abortController.signal.aborted) {
+        console.log('Nerd Code Completion: [llm] request cancelled (user typing or token cancelled)');
         return null;
       }
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(`Nerd Code Completion: [llm] request failed: ${msg}`);
       throw error;
     } finally {
       cancellationListener.dispose();
