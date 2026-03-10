@@ -303,38 +303,16 @@ describe('OpenAICompatibleBackend', () => {
       assert.ok(fetchStub.notCalled);
     });
 
-    it('returns null when cancelled mid-request via token', async () => {
-      // Simulate a slow fetch that gets cancelled
-      let fetchResolve: (v: any) => void;
-      fetchStub.returns(new Promise((resolve) => { fetchResolve = resolve; }));
-
-      const listeners: Array<() => void> = [];
-      const token = {
-        isCancellationRequested: false,
-        onCancellationRequested: (listener: () => void) => {
-          listeners.push(listener);
-          return { dispose: () => {} };
-        },
-      } as any;
+    it('completes the request even if token is cancelled mid-flight', async () => {
+      // Backend no longer aborts on token cancellation — it lets the request finish
+      // The provider handles stale result discarding
+      fetchStub.returns(successResponse('"world"'));
 
       const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
-      const promise = backend.complete(makeRequest(), token);
+      const result = await backend.complete(makeRequest(), makeToken());
 
-      // Simulate cancellation after fetch starts — the abort will cause
-      // the fetch promise to reject, but since signal.aborted is true,
-      // the backend returns null
-      token.isCancellationRequested = true;
-      listeners.forEach(l => l());
-
-      // Resolve fetch with an abort error (simulating what happens when signal fires)
-      fetchResolve!({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ choices: [{ message: { content: 'x' } }] }),
-      });
-
-      const result = await promise;
-      assert.equal(result, null);
+      // Request completes normally — cancellation is handled at provider level
+      assert.equal(result, '"world"');
     });
   });
 

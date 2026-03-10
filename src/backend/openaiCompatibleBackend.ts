@@ -44,14 +44,7 @@ export class OpenAICompatibleBackend implements CompletionBackend {
       throw new Error('model is required when using openai-compatible backend');
     }
 
-    const abortController = new AbortController();
-
-    const cancellationListener = token.onCancellationRequested(() => {
-      abortController.abort();
-    });
-
     if (token.isCancellationRequested) {
-      cancellationListener.dispose();
       return null;
     }
 
@@ -79,30 +72,24 @@ export class OpenAICompatibleBackend implements CompletionBackend {
         stop: ['<NO_COMPLETION/>'],
       });
 
-      // First attempt
+      // Do NOT wire VS Code's CancellationToken to fetch's AbortController.
+      // VS Code cancels tokens aggressively (cursor blink, repaint, etc.)
+      // which would kill every in-flight request to slow servers.
+      // Instead, let the request complete and check token afterwards.
       console.log(`Nerd Code Completion: [llm] POST ${url} (model: ${model})`);
       const startTime = Date.now();
-      let response = await this.doFetch(url, body, abortController.signal);
+      let response = await this.doFetch(url, body);
       const elapsed = Date.now() - startTime;
       console.log(`Nerd Code Completion: [llm] response ${response.status} in ${elapsed}ms`);
-
-      if (token.isCancellationRequested) {
-        console.log('Nerd Code Completion: [llm] cancelled after response');
-        return null;
-      }
 
       // On 401/403, refresh key and retry once
       if (response.status === 401 || response.status === 403) {
         console.log(`Nerd Code Completion: [llm] auth error (${response.status}), refreshing API key and retrying...`);
         await this.keyManager.refreshKey();
         const retryStart = Date.now();
-        response = await this.doFetch(url, body, abortController.signal);
+        response = await this.doFetch(url, body);
         const retryElapsed = Date.now() - retryStart;
         console.log(`Nerd Code Completion: [llm] retry response ${response.status} in ${retryElapsed}ms`);
-
-        if (token.isCancellationRequested) {
-          return null;
-        }
       }
 
       if (!response.ok) {
@@ -124,19 +111,13 @@ export class OpenAICompatibleBackend implements CompletionBackend {
       console.log(`Nerd Code Completion: [llm] completion: ${processed ? processed.length + ' chars' : 'null (filtered)'}`);
       return processed;
     } catch (error: unknown) {
-      if (abortController.signal.aborted) {
-        console.log('Nerd Code Completion: [llm] request cancelled (user typing or token cancelled)');
-        return null;
-      }
       const msg = error instanceof Error ? error.message : String(error);
       console.error(`Nerd Code Completion: [llm] request failed: ${msg}`);
       throw error;
-    } finally {
-      cancellationListener.dispose();
     }
   }
 
-  private async doFetch(url: string, body: string, signal: AbortSignal): Promise<Response> {
+  private async doFetch(url: string, body: string): Promise<Response> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -151,7 +132,6 @@ export class OpenAICompatibleBackend implements CompletionBackend {
       method: 'POST',
       headers,
       body,
-      signal,
     });
   }
 

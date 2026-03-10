@@ -11,7 +11,9 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
   private config: AutocompleteConfig;
   private statusBar: StatusBarManager;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private debounceReject: ((e: Error) => void) | null = null;
   private consecutiveErrors = 0;
+  private requestId = 0; // Tracks the latest request to discard stale results
   private static readonly MAX_CONSECUTIVE_ERRORS = 3;
 
   constructor(backend: CompletionBackend, config: AutocompleteConfig) {
@@ -65,17 +67,16 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
       }
     }
 
-    // Debounce
+    // Debounce — rejects previous waiters immediately
     try {
       await this.debounce(this.config.debounceMs, token);
     } catch {
-      console.log('Nerd Code Completion: [provider] cancelled during debounce');
       return null;
     }
 
-    if (token.isCancellationRequested) {
-      return null;
-    }
+    // Assign a request ID — if a newer request comes in while we're
+    // waiting for the backend, the result from this request is stale
+    const myRequestId = ++this.requestId;
 
     // Build request
     const request: CompletionRequest = {
@@ -91,9 +92,13 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
     this.statusBar.setState('loading');
 
     try {
+      // Let the backend request run to completion — do NOT abort it via
+      // VS Code's CancellationToken. The token fires too aggressively
+      // (cursor blink, repaint, other extensions) and would kill every
+      // request to servers with any latency.
       const completion = await this.backend.complete(request, token);
 
-      if (completion === null || token.isCancellationRequested) {
+      if (completion === null) {
         this.statusBar.setState('ready');
         return null;
       }
@@ -104,6 +109,19 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
       if (this.cache) {
         this.cache.set(cacheKey, completion);
       }
+
+      // If this result is stale (a newer request superseded us) or the
+      // VS Code token was cancelled (slow server, token expired), the
+      // returned items won't be shown. Cache the result and re-trigger
+      // inline suggestions so VS Code re-queries us — the cache hit
+      // will return instantly.
+      const isStale = myRequestId !== this.requestId;
+      if (isStale || token.isCancellationRequested) {
+        console.log(`Nerd Code Completion: [provider] result arrived late (${isStale ? 'stale' : 'token cancelled'}), re-triggering from cache`);
+        vscode.commands.executeCommand('editor.action.inlineSuggest.trigger');
+        return null;
+      }
+
       return [new vscode.InlineCompletionItem(completion)];
     } catch (error: unknown) {
       this.consecutiveErrors++;
@@ -124,22 +142,31 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
   }
 
   private debounce(ms: number, token: vscode.CancellationToken): Promise<void> {
+    // Reject the previous debounce waiter immediately (don't leak promises)
+    if (this.debounceReject) {
+      this.debounceReject(new Error('Superseded'));
+      this.debounceReject = null;
+    }
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
+
     return new Promise((resolve, reject) => {
-      if (this.debounceTimer) {
-        clearTimeout(this.debounceTimer);
-      }
+      this.debounceReject = reject;
 
       const disposable = token.onCancellationRequested(() => {
         if (this.debounceTimer) {
           clearTimeout(this.debounceTimer);
           this.debounceTimer = null;
         }
+        this.debounceReject = null;
         disposable.dispose();
         reject(new Error('Cancelled'));
       });
 
       this.debounceTimer = setTimeout(() => {
         this.debounceTimer = null;
+        this.debounceReject = null;
         disposable.dispose();
         resolve();
       }, ms);
