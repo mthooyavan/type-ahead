@@ -4,6 +4,11 @@
   "description": "Inline code autocomplete powered by Anthropic, OpenAI-compatible LLMs (Ollama, vLLM, LM Studio), or LiteLLM Gateway",
   "version": "0.3.0",
   "publisher": "type-ahead",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/type-ahead/type-ahead"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },

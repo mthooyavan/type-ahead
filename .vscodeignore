@@ -2,6 +2,10 @@ src/
 test/
 node_modules/
 .vscode-test/
+.claude/
+.mocharc.yml
 tsconfig.json
 esbuild.mjs
 .gitignore
+*.vsix
+dist/*.map
