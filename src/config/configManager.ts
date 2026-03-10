@@ -16,6 +16,8 @@ export interface AutocompleteConfig {
   apiBaseUrl: string;
   apiKey: string;
   apiKeyHelper: string;
+  excludePatterns: string[];
+  customInstructions: string;
 }
 
 export function getConfig(): AutocompleteConfig {
@@ -34,6 +36,8 @@ export function getConfig(): AutocompleteConfig {
     apiBaseUrl: resolveBaseUrl(rawBaseUrl, backend),
     apiKey: config.get<string>('apiKey', ''),
     apiKeyHelper: config.get<string>('apiKeyHelper', ''),
+    excludePatterns: config.get<string[]>('excludePatterns', []),
+    customInstructions: config.get<string>('customInstructions', '').trim(),
   };
 }
 

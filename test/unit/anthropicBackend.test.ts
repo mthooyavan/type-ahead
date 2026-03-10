@@ -26,6 +26,8 @@ function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteCo
     apiBaseUrl: 'https://api.anthropic.com',
     apiKey: 'sk-ant-test',
     apiKeyHelper: '',
+    excludePatterns: [],
+    customInstructions: '',
     ...overrides,
   };
 }
@@ -43,6 +45,7 @@ function makeRequest(): CompletionRequest {
     fileName: 'test.ts',
     cursorLine: 1,
     cursorColumn: 9,
+    systemPrompt: 'test system prompt',
   };
 }
 

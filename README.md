@@ -138,6 +138,8 @@ Open VS Code Settings (`Cmd+,` / `Ctrl+,`) and search for `typeAhead`.
 | `typeAhead.apiKeyHelper` | string | `""` | Shell command that outputs an API key (overrides `apiKey` — see below) |
 | `typeAhead.debounceMs` | number | `300` | Milliseconds to wait after you stop typing before requesting a completion |
 | `typeAhead.contextLines` | number | `100` | Lines of code before and after the cursor to send as context |
+| `typeAhead.excludePatterns` | string[] | `[]` | Glob patterns for files/folders where autocomplete is disabled (see below) |
+| `typeAhead.customInstructions` | string | `""` | Custom instructions appended to the system prompt (see below) |
 | `typeAhead.cacheSize` | number | `50` | Number of completions to cache. Set to `0` to disable caching |
 
 You can also set these in your `settings.json`:
@@ -149,6 +151,52 @@ You can also set these in your `settings.json`:
   "typeAhead.apiBaseUrl": "http://localhost:11434/v1"
 }
 ```
+
+---
+
+## Excluding Files and Folders
+
+Use `excludePatterns` to disable autocomplete in certain files, file types, or directories:
+
+```json
+{
+  "typeAhead.excludePatterns": [
+    "**/*.md",
+    "**/*.json",
+    "**/node_modules/**",
+    "**/dist/**",
+    ".env",
+    "*.lock"
+  ]
+}
+```
+
+**Supported patterns:**
+
+| Pattern | What it matches |
+|---|---|
+| `*.md` | Any file ending in `.md` |
+| `**/*.json` | Any `.json` file in any directory |
+| `**/node_modules/**` | Any file inside a `node_modules` folder |
+| `.env` | A file named exactly `.env` |
+| `src/secret.ts` | A specific file path |
+| `**/Dockerfile` | A file named `Dockerfile` in any directory |
+
+---
+
+## Custom Instructions
+
+Add your own instructions that the LLM should follow when generating completions:
+
+```json
+{
+  "typeAhead.customInstructions": "Always use TypeScript strict types. Prefer async/await over .then() chains. Use descriptive variable names."
+}
+```
+
+In the VS Code settings UI, the `customInstructions` field supports multi-line text so you can write longer instructions.
+
+These instructions are appended to the system prompt sent to the model with every completion request. Use them to enforce coding standards, style preferences, or project-specific conventions.
 
 ---
 

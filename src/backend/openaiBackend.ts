@@ -1,5 +1,5 @@
 import { CompletionBackend, CompletionRequest } from './types';
-import { buildPrompt, COMPLETION_SYSTEM_PROMPT } from '../prompt/promptBuilder';
+import { buildPrompt } from '../prompt/promptBuilder';
 import { postProcess } from '../prompt/postProcessor';
 import { AutocompleteConfig } from '../config/configManager';
 import { ApiKeyManager } from '../auth/apiKeyManager';
@@ -43,7 +43,7 @@ export class OpenAIBackend implements CompletionBackend {
       const body = JSON.stringify({
         model,
         messages: [
-          { role: 'system', content: COMPLETION_SYSTEM_PROMPT },
+          { role: 'system', content: request.systemPrompt },
           { role: 'user', content: prompt },
         ],
         temperature: 0.2,

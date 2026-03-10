@@ -4,6 +4,8 @@ import { gatherContext } from './context/contextGatherer';
 import { CompletionCache } from './cache/completionCache';
 import { AutocompleteConfig } from './config/configManager';
 import { StatusBarManager } from './statusBar';
+import { matchesAnyPattern } from './utils/globMatcher';
+import { buildSystemPrompt } from './prompt/promptBuilder';
 
 export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProvider {
   private backend: CompletionBackend;
@@ -51,6 +53,11 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
       return null;
     }
 
+    // Check exclude patterns
+    if (matchesAnyPattern(document.uri.fsPath, this.config.excludePatterns)) {
+      return null;
+    }
+
     // Gather context
     const codeContext = gatherContext(document, position, this.config.contextLines);
 
@@ -87,6 +94,7 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
       fileName: codeContext.fileName,
       cursorLine: codeContext.cursorLine,
       cursorColumn: codeContext.cursorColumn,
+      systemPrompt: buildSystemPrompt(this.config.customInstructions),
     };
 
     this.statusBar.setState('loading');

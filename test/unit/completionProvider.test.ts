@@ -27,6 +27,8 @@ function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteCo
     apiBaseUrl: 'http://localhost:11434/v1',
     apiKey: '',
     apiKeyHelper: '',
+    excludePatterns: [],
+    customInstructions: '',
     ...overrides,
   };
 }

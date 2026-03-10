@@ -27,6 +27,8 @@ function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteCo
     apiBaseUrl: 'http://localhost:11434/v1',
     apiKey: '',
     apiKeyHelper: '',
+    excludePatterns: [],
+    customInstructions: '',
     ...overrides,
   };
 }
@@ -89,7 +91,7 @@ describe('OpenAIBackend Integration', () => {
     const backend = new OpenAIBackend(makeConfig(), makeKeyManager());
     const result = await backend.complete({
       prefix: 'x = ', suffix: '', language: 'python',
-      filePath: '/main.py', fileName: 'main.py', cursorLine: 0, cursorColumn: 4,
+      filePath: '/main.py', fileName: 'main.py', cursorLine: 0, cursorColumn: 4, systemPrompt: 'test',
     });
 
     assert.equal(result, 'done');
@@ -123,7 +125,7 @@ describe('AnthropicBackend Integration', () => {
 
     const result = await backend.complete({
       prefix: 'x = ', suffix: '', language: 'python',
-      filePath: '/main.py', fileName: 'main.py', cursorLine: 0, cursorColumn: 4,
+      filePath: '/main.py', fileName: 'main.py', cursorLine: 0, cursorColumn: 4, systemPrompt: 'test',
     });
 
     assert.equal(result, 'done');

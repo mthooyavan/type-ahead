@@ -1,5 +1,5 @@
 import { CompletionBackend, CompletionRequest } from './types';
-import { buildPrompt, COMPLETION_SYSTEM_PROMPT } from '../prompt/promptBuilder';
+import { buildPrompt } from '../prompt/promptBuilder';
 import { postProcess } from '../prompt/postProcessor';
 import { AutocompleteConfig } from '../config/configManager';
 import { ApiKeyManager } from '../auth/apiKeyManager';
@@ -48,7 +48,7 @@ export class AnthropicBackend implements CompletionBackend {
       const body = JSON.stringify({
         model,
         max_tokens: 256,
-        system: COMPLETION_SYSTEM_PROMPT,
+        system: request.systemPrompt,
         messages: [
           { role: 'user', content: prompt },
         ],

@@ -8,6 +8,7 @@ export interface CompletionRequest {
   fileName: string;
   cursorLine: number;
   cursorColumn: number;
+  systemPrompt: string;
 }
 
 export interface CompletionBackend {

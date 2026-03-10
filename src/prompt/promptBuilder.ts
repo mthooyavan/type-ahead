@@ -10,6 +10,16 @@ Rules:
 - Do not repeat code that already exists before or after the cursor
 - If you cannot determine a useful completion, output exactly: <NO_COMPLETION/>`;
 
+export function buildSystemPrompt(customInstructions: string): string {
+  if (!customInstructions) {
+    return COMPLETION_SYSTEM_PROMPT;
+  }
+  return `${COMPLETION_SYSTEM_PROMPT}
+
+Additional instructions from the user:
+${customInstructions}`;
+}
+
 export function buildPrompt(context: CodeContext): string {
   return `File: ${context.fileName} (${context.language})
 

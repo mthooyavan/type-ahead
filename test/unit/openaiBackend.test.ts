@@ -27,6 +27,8 @@ function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteCo
     apiBaseUrl: 'http://localhost:11434/v1',
     apiKey: '',
     apiKeyHelper: '',
+    excludePatterns: [],
+    customInstructions: '',
     ...overrides,
   };
 }
@@ -44,6 +46,7 @@ function makeRequest(overrides: Partial<CompletionRequest> = {}): CompletionRequ
     fileName: 'test.ts',
     cursorLine: 1,
     cursorColumn: 9,
+    systemPrompt: 'test system prompt',
     ...overrides,
   };
 }

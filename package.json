@@ -55,6 +55,18 @@
           "default": "",
           "description": "Shell command that outputs an API key on stdout (e.g., 'my-tool get-api-key'). Overrides apiKey when set. Key is generated on IDE open and refreshed on auth errors"
         },
+        "typeAhead.excludePatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Glob patterns for files and folders where autocomplete is disabled. Examples: '**/*.md', '**/node_modules/**', '.env', '*.json'"
+        },
+        "typeAhead.customInstructions": {
+          "type": "string",
+          "default": "",
+          "editPresentation": "multilineText",
+          "description": "Custom instructions appended to the system prompt sent to the LLM (e.g., 'Always use TypeScript strict types', 'Prefer functional programming patterns')"
+        },
         "typeAhead.debounceMs": {
           "type": "number",
           "default": 300,
