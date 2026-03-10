@@ -67,7 +67,6 @@ export class OpenAICompatibleBackend implements CompletionBackend {
       });
 
       const url = `${openaiBaseUrl.replace(/\/+$/, '')}/chat/completions`;
-      console.log(`Nerd Code Completion: POST ${url} (model: ${model})`);
 
       const body = JSON.stringify({
         model,
@@ -81,17 +80,25 @@ export class OpenAICompatibleBackend implements CompletionBackend {
       });
 
       // First attempt
+      console.log(`Nerd Code Completion: [llm] POST ${url} (model: ${model})`);
+      const startTime = Date.now();
       let response = await this.doFetch(url, body, abortController.signal);
+      const elapsed = Date.now() - startTime;
+      console.log(`Nerd Code Completion: [llm] response ${response.status} in ${elapsed}ms`);
 
       if (token.isCancellationRequested) {
+        console.log('Nerd Code Completion: [llm] cancelled after response');
         return null;
       }
 
       // On 401/403, refresh key and retry once
       if (response.status === 401 || response.status === 403) {
-        console.log('Nerd Code Completion: auth error, refreshing API key...');
+        console.log(`Nerd Code Completion: [llm] auth error (${response.status}), refreshing API key and retrying...`);
         await this.keyManager.refreshKey();
+        const retryStart = Date.now();
         response = await this.doFetch(url, body, abortController.signal);
+        const retryElapsed = Date.now() - retryStart;
+        console.log(`Nerd Code Completion: [llm] retry response ${response.status} in ${retryElapsed}ms`);
 
         if (token.isCancellationRequested) {
           return null;
@@ -100,17 +107,22 @@ export class OpenAICompatibleBackend implements CompletionBackend {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => '');
-        throw new Error(`API error ${response.status}: ${errorText || response.statusText}`);
+        const errMsg = `API error ${response.status}: ${errorText || response.statusText}`;
+        console.error(`Nerd Code Completion: [llm] ${errMsg}`);
+        throw new Error(errMsg);
       }
 
       const data = (await response.json()) as OpenAIChatResponse;
 
       const content = data.choices?.[0]?.message?.content;
       if (!content) {
+        console.log('Nerd Code Completion: [llm] empty completion returned');
         return null;
       }
 
-      return postProcess(content);
+      const processed = postProcess(content);
+      console.log(`Nerd Code Completion: [llm] completion: ${processed ? processed.length + ' chars' : 'null (filtered)'}`);
+      return processed;
     } catch (error: unknown) {
       if (abortController.signal.aborted) {
         return null;
@@ -130,6 +142,7 @@ export class OpenAICompatibleBackend implements CompletionBackend {
     if (apiKey) {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
+    console.log(`Nerd Code Completion: [llm] auth: ${apiKey ? 'Bearer token set' : 'no auth'}`);
 
     return fetch(url, {
       method: 'POST',

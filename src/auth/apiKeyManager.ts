@@ -29,18 +29,22 @@ export class ApiKeyManager {
    * otherwise generates a new one.
    */
   async getKey(): Promise<string | null> {
-    // If we have a cached key (from helper), return it
     if (this.cachedKey !== null) {
       return this.cachedKey;
     }
 
-    // If helper is configured, run it to generate a key
     if (this.helperCommand) {
+      console.log(`Nerd Code Completion: [auth] generating key via helper: ${this.helperCommand.split(' ')[0]}`);
       return this.executeHelper();
     }
 
-    // Fall back to static key (may be empty string → null)
-    return this.staticKey || null;
+    if (this.staticKey) {
+      console.log('Nerd Code Completion: [auth] using static API key');
+      return this.staticKey;
+    }
+
+    console.log('Nerd Code Completion: [auth] no API key configured (no auth header will be sent)');
+    return null;
   }
 
   /**
@@ -49,15 +53,16 @@ export class ApiKeyManager {
    */
   async refreshKey(): Promise<string | null> {
     if (!this.helperCommand) {
-      // No helper → static key can't be refreshed
+      console.log('Nerd Code Completion: [auth] no helper configured, cannot refresh key');
       return this.staticKey || null;
     }
 
-    // Deduplicate concurrent refresh calls
     if (this.refreshing) {
+      console.log('Nerd Code Completion: [auth] key refresh already in progress, waiting...');
       return this.refreshing;
     }
 
+    console.log('Nerd Code Completion: [auth] refreshing API key via helper...');
     this.cachedKey = null;
     this.refreshing = this.executeHelper().finally(() => {
       this.refreshing = null;
@@ -85,7 +90,9 @@ export class ApiKeyManager {
    */
   async warmUp(): Promise<void> {
     if (this.helperCommand) {
+      console.log('Nerd Code Completion: [auth] warming up API key at session start...');
       await this.executeHelper();
+      console.log('Nerd Code Completion: [auth] API key ready');
     }
   }
 
@@ -102,16 +109,20 @@ export class ApiKeyManager {
       this.execFileFn(executable, args, { timeout: 10000 }, (error, stdout, stderr) => {
         if (error) {
           const msg = stderr?.trim() || error.message;
+          console.error(`Nerd Code Completion: [auth] helper command failed: ${msg}`);
           reject(new Error(`API key helper failed: ${msg}`));
           return;
         }
 
         const key = stdout.trim();
         if (!key) {
+          console.error('Nerd Code Completion: [auth] helper command returned empty output');
           reject(new Error('API key helper returned empty output'));
           return;
         }
 
+        const maskedKey = key.length > 8 ? key.slice(0, 4) + '...' + key.slice(-4) : '****';
+        console.log(`Nerd Code Completion: [auth] helper returned key: ${maskedKey}`);
         this.cachedKey = key;
         resolve(key);
       });
