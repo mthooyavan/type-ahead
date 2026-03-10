@@ -96,7 +96,7 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
       // VS Code's CancellationToken. The token fires too aggressively
       // (cursor blink, repaint, other extensions) and would kill every
       // request to servers with any latency.
-      const completion = await this.backend.complete(request, token);
+      const completion = await this.backend.complete(request);
 
       if (completion === null) {
         this.statusBar.setState('ready');

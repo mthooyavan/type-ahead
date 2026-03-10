@@ -1,8 +1,8 @@
 {
   "name": "nerd-code-completion",
   "displayName": "Nerd Code Completion",
-  "description": "Inline code autocomplete powered by Claude or any OpenAI-compatible LLM (Ollama, vLLM, LM Studio, etc.)",
-  "version": "0.2.0",
+  "description": "Inline code autocomplete powered by Anthropic, OpenAI-compatible LLMs (Ollama, vLLM, LM Studio), or LiteLLM Gateway",
+  "version": "0.3.0",
   "publisher": "nerd-community",
   "engines": {
     "vscode": "^1.85.0"
@@ -26,33 +26,34 @@
         },
         "nerdCodeCompletion.backend": {
           "type": "string",
-          "default": "claude",
-          "enum": ["claude", "openai-compatible"],
+          "default": "openai",
+          "enum": ["openai", "anthropic", "litellm"],
           "enumDescriptions": [
-            "Use Claude via the Claude Agent SDK (inherits Claude Code config)",
-            "Use any OpenAI-compatible API (Ollama, vLLM, LM Studio, etc.)"
+            "OpenAI Compatible (Ollama, vLLM, LM Studio, or any OpenAI-compatible server)",
+            "Anthropic (Claude models via the Anthropic Messages API)",
+            "LiteLLM Gateway (unified proxy for multiple LLM providers)"
           ],
           "description": "Which backend to use for completions"
         },
         "nerdCodeCompletion.model": {
           "type": "string",
           "default": "",
-          "description": "Model name. For Claude: empty uses ANTHROPIC_SMALL_FAST_MODEL or claude-haiku-4-5. For openai-compatible: required (e.g., 'codellama:7b', 'deepseek-coder:6.7b')"
+          "description": "Model name. For Anthropic: empty uses ANTHROPIC_SMALL_FAST_MODEL or claude-haiku-4-5. For OpenAI/LiteLLM: required (e.g., 'codellama:7b', 'gpt-4o-mini')"
         },
-        "nerdCodeCompletion.openaiBaseUrl": {
+        "nerdCodeCompletion.apiBaseUrl": {
           "type": "string",
           "default": "",
-          "description": "Base URL for OpenAI-compatible API. Required when backend is 'openai-compatible'. Examples: http://localhost:11434/v1 (Ollama), http://localhost:8000/v1 (vLLM)"
+          "description": "Base URL for the API. Required for OpenAI/LiteLLM (e.g., http://localhost:11434/v1). For Anthropic: defaults to https://api.anthropic.com"
         },
-        "nerdCodeCompletion.openaiApiKey": {
+        "nerdCodeCompletion.apiKey": {
           "type": "string",
           "default": "",
-          "description": "Static API key for the OpenAI-compatible server. Overridden by apiKeyHelper if set. Leave empty for local servers like Ollama"
+          "description": "Static API key. Overridden by apiKeyHelper if set. Leave empty for local servers like Ollama that need no auth"
         },
         "nerdCodeCompletion.apiKeyHelper": {
           "type": "string",
           "default": "",
-          "description": "Shell command that outputs an API key on stdout (e.g., 'my-tool get-api-key'). Used by openai-compatible backend. Overrides openaiApiKey when set. Key is generated on IDE open and refreshed on auth errors."
+          "description": "Shell command that outputs an API key on stdout (e.g., 'my-tool get-api-key'). Overrides apiKey when set. Key is generated on IDE open and refreshed on auth errors"
         },
         "nerdCodeCompletion.debounceMs": {
           "type": "number",
@@ -107,7 +108,6 @@
     "typescript": "^5.3.0"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.72",
     "lru-cache": "^11.0.0"
   }
 }

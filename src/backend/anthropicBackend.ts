@@ -1,22 +1,23 @@
-import * as vscode from 'vscode';
 import { CompletionBackend, CompletionRequest } from './types';
 import { buildPrompt, COMPLETION_SYSTEM_PROMPT } from '../prompt/promptBuilder';
 import { postProcess } from '../prompt/postProcessor';
 import { AutocompleteConfig } from '../config/configManager';
 import { ApiKeyManager } from '../auth/apiKeyManager';
 
-interface OpenAIChatResponse {
-  choices?: Array<{
-    message?: {
-      content?: string;
-    };
+const ANTHROPIC_VERSION = '2023-06-01';
+
+interface AnthropicMessagesResponse {
+  content?: Array<{
+    type?: string;
+    text?: string;
   }>;
   error?: {
+    type?: string;
     message?: string;
   };
 }
 
-export class OpenAICompatibleBackend implements CompletionBackend {
+export class AnthropicBackend implements CompletionBackend {
   private config: AutocompleteConfig;
   private keyManager: ApiKeyManager;
 
@@ -27,69 +28,46 @@ export class OpenAICompatibleBackend implements CompletionBackend {
 
   updateConfig(config: AutocompleteConfig): void {
     this.config = config;
-    this.keyManager.updateConfig(config.apiKeyHelper, config.openaiApiKey);
+    this.keyManager.updateConfig(config.apiKeyHelper, config.apiKey);
   }
 
-  async complete(
-    request: CompletionRequest,
-    token: vscode.CancellationToken
-  ): Promise<string | null> {
-    const { openaiBaseUrl, model } = this.config;
+  async complete(request: CompletionRequest): Promise<string | null> {
+    const { apiBaseUrl, model } = this.config;
 
-    if (!openaiBaseUrl) {
-      throw new Error('openaiBaseUrl is required when using openai-compatible backend');
+    if (!apiBaseUrl) {
+      throw new Error('apiBaseUrl is required for the Anthropic backend');
     }
-
     if (!model) {
-      throw new Error('model is required when using openai-compatible backend');
-    }
-
-    if (token.isCancellationRequested) {
-      return null;
+      throw new Error('model is required for the Anthropic backend');
     }
 
     try {
-      const prompt = buildPrompt({
-        prefix: request.prefix,
-        suffix: request.suffix,
-        language: request.language,
-        fileName: request.fileName,
-        filePath: request.filePath,
-        cursorLine: request.cursorLine,
-        cursorColumn: request.cursorColumn,
-      });
-
-      const url = `${openaiBaseUrl.replace(/\/+$/, '')}/chat/completions`;
+      const prompt = buildPrompt(request);
+      const url = `${apiBaseUrl.replace(/\/+$/, '')}/v1/messages`;
 
       const body = JSON.stringify({
         model,
+        max_tokens: 256,
+        system: COMPLETION_SYSTEM_PROMPT,
         messages: [
-          { role: 'system', content: COMPLETION_SYSTEM_PROMPT },
           { role: 'user', content: prompt },
         ],
         temperature: 0.2,
-        max_tokens: 256,
-        stop: ['<NO_COMPLETION/>'],
+        stop_sequences: ['<NO_COMPLETION/>'],
       });
 
-      // Do NOT wire VS Code's CancellationToken to fetch's AbortController.
-      // VS Code cancels tokens aggressively (cursor blink, repaint, etc.)
-      // which would kill every in-flight request to slow servers.
-      // Instead, let the request complete and check token afterwards.
       console.log(`Nerd Code Completion: [llm] POST ${url} (model: ${model})`);
       const startTime = Date.now();
       let response = await this.doFetch(url, body);
       const elapsed = Date.now() - startTime;
       console.log(`Nerd Code Completion: [llm] response ${response.status} in ${elapsed}ms`);
 
-      // On 401/403, refresh key and retry once
       if (response.status === 401 || response.status === 403) {
         console.log(`Nerd Code Completion: [llm] auth error (${response.status}), refreshing API key and retrying...`);
         await this.keyManager.refreshKey();
         const retryStart = Date.now();
         response = await this.doFetch(url, body);
-        const retryElapsed = Date.now() - retryStart;
-        console.log(`Nerd Code Completion: [llm] retry response ${response.status} in ${retryElapsed}ms`);
+        console.log(`Nerd Code Completion: [llm] retry response ${response.status} in ${Date.now() - retryStart}ms`);
       }
 
       if (!response.ok) {
@@ -99,9 +77,9 @@ export class OpenAICompatibleBackend implements CompletionBackend {
         throw new Error(errMsg);
       }
 
-      const data = (await response.json()) as OpenAIChatResponse;
-
-      const content = data.choices?.[0]?.message?.content;
+      const data = (await response.json()) as AnthropicMessagesResponse;
+      const textBlock = data.content?.find((c) => c.type === 'text');
+      const content = textBlock?.text;
       if (!content) {
         console.log('Nerd Code Completion: [llm] empty completion returned');
         return null;
@@ -120,19 +98,14 @@ export class OpenAICompatibleBackend implements CompletionBackend {
   private async doFetch(url: string, body: string): Promise<Response> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'anthropic-version': ANTHROPIC_VERSION,
     };
-
     const apiKey = await this.keyManager.getKey();
     if (apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`;
+      headers['x-api-key'] = apiKey;
     }
-    console.log(`Nerd Code Completion: [llm] auth: ${apiKey ? 'Bearer token set' : 'no auth'}`);
-
-    return fetch(url, {
-      method: 'POST',
-      headers,
-      body,
-    });
+    console.log(`Nerd Code Completion: [llm] auth: ${apiKey ? 'x-api-key set' : 'no auth'}`);
+    return fetch(url, { method: 'POST', headers, body });
   }
 
   dispose(): void {
