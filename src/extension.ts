@@ -1,20 +1,40 @@
 import * as vscode from 'vscode';
-import { getConfig, onConfigChange } from './config/configManager';
+import { getConfig, onConfigChange, AutocompleteConfig } from './config/configManager';
+import { CompletionBackend } from './backend/types';
 import { ClaudeAgentBackend } from './backend/claudeAgentBackend';
+import { OpenAICompatibleBackend } from './backend/openaiCompatibleBackend';
 import { ClaudeCompletionProvider } from './completionProvider';
 
 let provider: ClaudeCompletionProvider | null = null;
-let providerDisposable: vscode.Disposable | null = null;
+let currentBackend: CompletionBackend | null = null;
+let currentBackendType: string | null = null;
+
+export function createBackend(config: AutocompleteConfig): CompletionBackend {
+  if (config.backend === 'openai-compatible') {
+    if (!config.openaiBaseUrl) {
+      vscode.window.showErrorMessage(
+        'Claude Autocomplete: "openaiBaseUrl" is required when backend is "openai-compatible". Please set it in settings.'
+      );
+    }
+    if (!config.model) {
+      vscode.window.showErrorMessage(
+        'Claude Autocomplete: "model" is required when backend is "openai-compatible". Please set it in settings.'
+      );
+    }
+    return new OpenAICompatibleBackend(config);
+  }
+  return new ClaudeAgentBackend(config);
+}
 
 export function activate(context: vscode.ExtensionContext): void {
   const config = getConfig();
 
-  // Create backend and provider
-  const backend = new ClaudeAgentBackend(config);
-  provider = new ClaudeCompletionProvider(backend, config);
+  currentBackend = createBackend(config);
+  currentBackendType = config.backend;
+  provider = new ClaudeCompletionProvider(currentBackend, config);
 
   // Register inline completion provider for all languages
-  providerDisposable = vscode.languages.registerInlineCompletionItemProvider(
+  const providerDisposable = vscode.languages.registerInlineCompletionItemProvider(
     { pattern: '**' },
     provider
   );
@@ -34,17 +54,33 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(toggleCommand);
 
-  // Listen for config changes and update provider
+  // Listen for config changes — swap backend if backend type changed
   const configWatcher = onConfigChange(() => {
     const newConfig = getConfig();
-    if (provider) {
-      provider.updateConfig(newConfig);
+
+    if (newConfig.backend !== currentBackendType) {
+      // Backend type changed — swap backend on the existing registered provider
+      currentBackend = createBackend(newConfig);
+      currentBackendType = newConfig.backend;
+
+      if (provider) {
+        provider.setBackend(currentBackend); // disposes old backend internally
+        provider.updateConfig(newConfig);
+      }
+      console.log(`Claude Autocomplete: switched to ${newConfig.backend} backend`);
+    } else {
+      // Same backend — just update config
+      if (provider) {
+        provider.updateConfig(newConfig);
+      }
+      if (currentBackend) {
+        currentBackend.updateConfig(newConfig);
+      }
     }
-    backend.updateConfig(newConfig);
   });
   context.subscriptions.push(configWatcher);
 
-  console.log('Claude Autocomplete: activated');
+  console.log(`Claude Autocomplete: activated (${config.backend} backend)`);
 }
 
 export function deactivate(): void {
@@ -52,5 +88,7 @@ export function deactivate(): void {
     provider.dispose();
     provider = null;
   }
+  currentBackend = null;
+  currentBackendType = null;
   console.log('Claude Autocomplete: deactivated');
 }

@@ -3,30 +3,47 @@ import * as vscode from 'vscode';
 const DEFAULT_MODEL = 'claude-haiku-4-5';
 const CONFIG_SECTION = 'claudeAutocomplete';
 
+export type BackendType = 'claude' | 'openai-compatible';
+
 export interface AutocompleteConfig {
   enabled: boolean;
+  backend: BackendType;
   model: string;
   debounceMs: number;
   contextLines: number;
   cacheSize: number;
+  openaiBaseUrl: string;
+  openaiApiKey: string;
 }
 
 export function getConfig(): AutocompleteConfig {
   const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+  const backend = config.get<BackendType>('backend', 'claude');
+  const rawModel = config.get<string>('model', '');
 
   return {
     enabled: config.get<boolean>('enabled', true),
-    model: resolveModel(config.get<string>('model', '')),
+    backend,
+    model: resolveModel(rawModel, backend),
     debounceMs: config.get<number>('debounceMs', 300),
     contextLines: config.get<number>('contextLines', 100),
     cacheSize: config.get<number>('cacheSize', 50),
+    openaiBaseUrl: config.get<string>('openaiBaseUrl', '').trim(),
+    openaiApiKey: config.get<string>('openaiApiKey', ''),
   };
 }
 
-export function resolveModel(settingValue: string): string {
-  // Priority: extension setting > env var > default
-  if (settingValue && settingValue.trim().length > 0) {
-    return settingValue.trim();
+export function resolveModel(settingValue: string, backend: BackendType): string {
+  const trimmed = settingValue.trim();
+
+  if (backend === 'openai-compatible') {
+    // For OpenAI-compatible, use the raw setting value directly — no env var fallback
+    return trimmed;
+  }
+
+  // Claude backend: setting → env var → default
+  if (trimmed.length > 0) {
+    return trimmed;
   }
 
   const envModel = process.env.ANTHROPIC_SMALL_FAST_MODEL;

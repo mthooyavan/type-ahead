@@ -25,10 +25,13 @@ async function* mockQueryGenerator(messages: Array<{ type: string; subtype?: str
 function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteConfig {
   return {
     enabled: true,
+    backend: 'claude',
     model: 'claude-haiku-4-5',
     debounceMs: 300,
     contextLines: 100,
     cacheSize: 50,
+    openaiBaseUrl: '',
+    openaiApiKey: '',
     ...overrides,
   };
 }

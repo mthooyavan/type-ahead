@@ -24,10 +24,30 @@
           "default": true,
           "description": "Enable or disable Claude inline autocomplete"
         },
+        "claudeAutocomplete.backend": {
+          "type": "string",
+          "default": "claude",
+          "enum": ["claude", "openai-compatible"],
+          "enumDescriptions": [
+            "Use Claude via the Claude Agent SDK (inherits Claude Code config)",
+            "Use any OpenAI-compatible API (Ollama, vLLM, LM Studio, etc.)"
+          ],
+          "description": "Which backend to use for completions"
+        },
         "claudeAutocomplete.model": {
           "type": "string",
           "default": "",
-          "description": "Model to use for completions. Leave empty to use ANTHROPIC_SMALL_FAST_MODEL env var or claude-haiku-4-5"
+          "description": "Model name. For Claude: empty uses ANTHROPIC_SMALL_FAST_MODEL or claude-haiku-4-5. For openai-compatible: required (e.g., 'codellama:7b', 'deepseek-coder:6.7b')"
+        },
+        "claudeAutocomplete.openaiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Base URL for OpenAI-compatible API. Required when backend is 'openai-compatible'. Examples: http://localhost:11434/v1 (Ollama), http://localhost:8000/v1 (vLLM)"
+        },
+        "claudeAutocomplete.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Optional API key for the OpenAI-compatible server. Leave empty for local servers like Ollama that need no auth"
         },
         "claudeAutocomplete.debounceMs": {
           "type": "number",

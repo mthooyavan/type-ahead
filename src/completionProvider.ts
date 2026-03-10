@@ -29,6 +29,12 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
     this.consecutiveErrors = 0;
   }
 
+  setBackend(backend: CompletionBackend): void {
+    this.backend.dispose();
+    this.backend = backend;
+    this.consecutiveErrors = 0;
+  }
+
   async provideInlineCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position,

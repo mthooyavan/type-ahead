@@ -19,10 +19,13 @@ import type * as vscode from 'vscode';
 function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteConfig {
   return {
     enabled: true,
+    backend: 'claude',
     model: 'claude-haiku-4-5',
     debounceMs: 10, // Short for tests
     contextLines: 100,
     cacheSize: 50,
+    openaiBaseUrl: '',
+    openaiApiKey: '',
     ...overrides,
   };
 }
