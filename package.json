@@ -3,7 +3,7 @@
   "displayName": "Type Ahead",
   "description": "Inline code autocomplete powered by Anthropic, OpenAI-compatible LLMs (Ollama, vLLM, LM Studio), or LiteLLM Gateway",
   "version": "0.3.0",
-  "publisher": "type-ahead",
+  "publisher": "Codedraft",
   "license": "MIT",
   "repository": {
     "type": "git",
