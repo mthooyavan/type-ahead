@@ -106,7 +106,8 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
       if (uriMatch && versionMatch && lineMatch && charMatch) {
         console.log('Type Ahead: [provider] serving pending result');
         this.lastCompletion = { value: pr.value, uri: pr.uri, line: pr.line };
-        return [new vscode.InlineCompletionItem(pr.value)];
+        const insertRange = new vscode.Range(position, position);
+        return [new vscode.InlineCompletionItem(pr.value, insertRange)];
       }
       // Position/version changed — discard stale pending result
       console.log('Type Ahead: [provider] discarding stale pending result (position changed)');
@@ -128,7 +129,8 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
       const cached = this.cache.get(cacheKey);
       if (cached !== undefined) {
         this.lastCompletion = { value: cached, uri: document.uri.toString(), line: position.line };
-        return [new vscode.InlineCompletionItem(cached)];
+        const insertRange = new vscode.Range(position, position);
+        return [new vscode.InlineCompletionItem(cached, insertRange)];
       }
     }
 
@@ -240,7 +242,10 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
       }
 
       this.lastCompletion = { value: completion, uri: document.uri.toString(), line: position.line };
-      return [new vscode.InlineCompletionItem(completion)];
+      const preview = completion.length > 40 ? completion.substring(0, 40) + '...' : completion;
+      console.log(`Type Ahead: [provider] returning: "${preview.replace(/\n/g, '\\n')}"`);
+      const insertRange = new vscode.Range(position, position);
+      return [new vscode.InlineCompletionItem(completion, insertRange)];
     } catch (error: unknown) {
       this.consecutiveErrors++;
       this.statusBar.setState(
