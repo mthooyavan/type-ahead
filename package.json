@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/type-ahead/type-ahead"
+    "url": "https://github.com/mthooyavan/type-ahead.git"
   },
   "engines": {
     "vscode": "^1.85.0"
