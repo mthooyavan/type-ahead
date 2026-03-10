@@ -106,13 +106,13 @@ export class ClaudeCompletionProvider implements vscode.InlineCompletionItemProv
       return [new vscode.InlineCompletionItem(completion)];
     } catch (error: unknown) {
       this.consecutiveErrors++;
-      console.error('Claude Autocomplete: completion error', error);
+      console.error('Nerd Code Completion: completion error', error);
 
       if (this.consecutiveErrors >= ClaudeCompletionProvider.MAX_CONSECUTIVE_ERRORS) {
         this.statusBar.setState('error');
         const message = error instanceof Error ? error.message : 'Unknown error';
         vscode.window.showWarningMessage(
-          `Claude Autocomplete: Multiple failures (${message}). Check your Claude Code configuration.`
+          `Nerd Code Completion: Multiple failures (${message}). Check your Nerd Code Completion configuration.`
         );
       } else {
         this.statusBar.setState('ready');

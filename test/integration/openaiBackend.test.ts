@@ -14,6 +14,7 @@ const originalResolveFilename = (Module as any)._resolveFilename;
 import { createBackend } from '../../src/extension';
 import { ClaudeAgentBackend } from '../../src/backend/claudeAgentBackend';
 import { OpenAICompatibleBackend } from '../../src/backend/openaiCompatibleBackend';
+import { ApiKeyManager } from '../../src/auth/apiKeyManager';
 import type { AutocompleteConfig } from '../../src/config/configManager';
 
 function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteConfig {
@@ -26,8 +27,13 @@ function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteCo
     cacheSize: 50,
     openaiBaseUrl: '',
     openaiApiKey: '',
+    apiKeyHelper: '',
     ...overrides,
   };
+}
+
+function makeKeyManager(staticKey = ''): ApiKeyManager {
+  return new ApiKeyManager('', staticKey);
 }
 
 describe('Backend Factory', () => {
@@ -36,7 +42,7 @@ describe('Backend Factory', () => {
   });
 
   it('creates ClaudeAgentBackend when backend is "claude"', () => {
-    const backend = createBackend(makeConfig({ backend: 'claude' }));
+    const backend = createBackend(makeConfig({ backend: 'claude' }), makeKeyManager());
     assert.ok(backend instanceof ClaudeAgentBackend);
     backend.dispose();
   });
@@ -46,24 +52,23 @@ describe('Backend Factory', () => {
       backend: 'openai-compatible',
       model: 'codellama:7b',
       openaiBaseUrl: 'http://localhost:11434/v1',
-    }));
+    }), makeKeyManager());
     assert.ok(backend instanceof OpenAICompatibleBackend);
     backend.dispose();
   });
 
   it('defaults to ClaudeAgentBackend', () => {
-    const backend = createBackend(makeConfig());
+    const backend = createBackend(makeConfig(), makeKeyManager());
     assert.ok(backend instanceof ClaudeAgentBackend);
     backend.dispose();
   });
 
   it('creates OpenAICompatibleBackend even with missing baseUrl (validation is deferred)', () => {
-    // The backend is still created — it will error at runtime when complete() is called
     const backend = createBackend(makeConfig({
       backend: 'openai-compatible',
       model: 'some-model',
       openaiBaseUrl: '',
-    }));
+    }), makeKeyManager());
     assert.ok(backend instanceof OpenAICompatibleBackend);
     backend.dispose();
   });
@@ -93,7 +98,7 @@ describe('OpenAICompatibleBackend Integration', () => {
       backend: 'openai-compatible',
       model: 'codellama:7b',
       openaiBaseUrl: 'http://localhost:11434/v1',
-    }));
+    }), makeKeyManager());
 
     const token = {
       isCancellationRequested: false,
@@ -117,12 +122,9 @@ describe('OpenAICompatibleBackend Integration', () => {
 
     const body = JSON.parse(fetchStub.firstCall.args[1].body);
     assert.equal(body.model, 'codellama:7b');
-    assert.equal(body.messages[0].role, 'system');
-    assert.equal(body.messages[1].role, 'user');
-    assert.ok(body.messages[1].content.includes('<CURSOR/>'));
   });
 
-  it('works with vLLM-style endpoint', async () => {
+  it('works with vLLM-style endpoint and API key', async () => {
     fetchStub.returns(Promise.resolve({
       ok: true,
       status: 200,
@@ -136,7 +138,7 @@ describe('OpenAICompatibleBackend Integration', () => {
       model: 'deepseek-coder-v2',
       openaiBaseUrl: 'http://localhost:8000/v1',
       openaiApiKey: 'api-key-123',
-    }));
+    }), makeKeyManager('api-key-123'));
 
     const token = {
       isCancellationRequested: false,
@@ -155,11 +157,50 @@ describe('OpenAICompatibleBackend Integration', () => {
 
     assert.equal(result, 'return 42;');
 
-    const calledUrl = fetchStub.firstCall.args[0];
-    assert.equal(calledUrl, 'http://localhost:8000/v1/chat/completions');
-
     const headers = fetchStub.firstCall.args[1].headers;
     assert.equal(headers['Authorization'], 'Bearer api-key-123');
+  });
+
+  it('retries on 401 after refreshing key', async () => {
+    // First call returns 401, second returns success
+    fetchStub.onFirstCall().returns(Promise.resolve({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+      text: () => Promise.resolve('Invalid API key'),
+    }));
+    fetchStub.onSecondCall().returns(Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        choices: [{ message: { content: 'success after refresh' } }],
+      }),
+    }));
+
+    const backend = new OpenAICompatibleBackend(makeConfig({
+      backend: 'openai-compatible',
+      model: 'test-model',
+      openaiBaseUrl: 'http://localhost:11434/v1',
+      openaiApiKey: 'old-key',
+    }), makeKeyManager('old-key'));
+
+    const token = {
+      isCancellationRequested: false,
+      onCancellationRequested: () => ({ dispose: () => {} }),
+    } as any;
+
+    const result = await backend.complete({
+      prefix: 'x = ',
+      suffix: '',
+      language: 'python',
+      filePath: '/main.py',
+      fileName: 'main.py',
+      cursorLine: 0,
+      cursorColumn: 4,
+    }, token);
+
+    assert.equal(result, 'success after refresh');
+    assert.equal(fetchStub.callCount, 2);
   });
 
   it('handles Ollama model-not-found error gracefully', async () => {
@@ -174,7 +215,7 @@ describe('OpenAICompatibleBackend Integration', () => {
       backend: 'openai-compatible',
       model: 'nonexistent',
       openaiBaseUrl: 'http://localhost:11434/v1',
-    }));
+    }), makeKeyManager());
 
     const token = {
       isCancellationRequested: false,

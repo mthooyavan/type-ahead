@@ -13,6 +13,7 @@ const originalResolveFilename = (Module as any)._resolveFilename;
 
 import { OpenAICompatibleBackend } from '../../src/backend/openaiCompatibleBackend';
 import { CompletionRequest } from '../../src/backend/types';
+import { ApiKeyManager } from '../../src/auth/apiKeyManager';
 import type { AutocompleteConfig } from '../../src/config/configManager';
 
 function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteConfig {
@@ -25,8 +26,13 @@ function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteCo
     cacheSize: 50,
     openaiBaseUrl: 'http://localhost:11434/v1',
     openaiApiKey: '',
+    apiKeyHelper: '',
     ...overrides,
   };
+}
+
+function makeKeyManager(staticKey = ''): ApiKeyManager {
+  return new ApiKeyManager('', staticKey);
 }
 
 function makeRequest(overrides: Partial<CompletionRequest> = {}): CompletionRequest {
@@ -80,7 +86,7 @@ describe('OpenAICompatibleBackend', () => {
     it('returns completion text from API response', async () => {
       fetchStub.returns(successResponse('"world"'));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
       const result = await backend.complete(makeRequest(), makeToken());
 
       assert.equal(result, '"world"');
@@ -89,7 +95,7 @@ describe('OpenAICompatibleBackend', () => {
     it('post-processes markdown fences from response', async () => {
       fetchStub.returns(successResponse('```typescript\n"world"\n```'));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
       const result = await backend.complete(makeRequest(), makeToken());
 
       assert.equal(result, '"world"');
@@ -98,7 +104,7 @@ describe('OpenAICompatibleBackend', () => {
     it('returns null for NO_COMPLETION marker', async () => {
       fetchStub.returns(successResponse('<NO_COMPLETION/>'));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
       const result = await backend.complete(makeRequest(), makeToken());
 
       assert.equal(result, null);
@@ -109,7 +115,7 @@ describe('OpenAICompatibleBackend', () => {
         choices: [{ message: { content: '' } }],
       }));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
       const result = await backend.complete(makeRequest(), makeToken());
 
       assert.equal(result, null);
@@ -118,7 +124,7 @@ describe('OpenAICompatibleBackend', () => {
     it('returns null for missing choices', async () => {
       fetchStub.returns(mockFetchResponse({ choices: [] }));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
       const result = await backend.complete(makeRequest(), makeToken());
 
       assert.equal(result, null);
@@ -130,7 +136,7 @@ describe('OpenAICompatibleBackend', () => {
       fetchStub.returns(successResponse('x'));
 
       const backend = new OpenAICompatibleBackend(
-        makeConfig({ openaiBaseUrl: 'http://localhost:11434/v1/' })
+        makeConfig({ openaiBaseUrl: 'http://localhost:11434/v1/' }), makeKeyManager()
       );
       await backend.complete(makeRequest(), makeToken());
 
@@ -142,7 +148,7 @@ describe('OpenAICompatibleBackend', () => {
       fetchStub.returns(successResponse('x'));
 
       const backend = new OpenAICompatibleBackend(
-        makeConfig({ model: 'deepseek-coder:6.7b' })
+        makeConfig({ model: 'deepseek-coder:6.7b' }), makeKeyManager()
       );
       await backend.complete(makeRequest(), makeToken());
 
@@ -153,7 +159,7 @@ describe('OpenAICompatibleBackend', () => {
     it('sends system and user messages', async () => {
       fetchStub.returns(successResponse('x'));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
       await backend.complete(makeRequest(), makeToken());
 
       const body = JSON.parse(fetchStub.firstCall.args[1].body);
@@ -166,7 +172,7 @@ describe('OpenAICompatibleBackend', () => {
     it('sends temperature and max_tokens', async () => {
       fetchStub.returns(successResponse('x'));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
       await backend.complete(makeRequest(), makeToken());
 
       const body = JSON.parse(fetchStub.firstCall.args[1].body);
@@ -177,7 +183,7 @@ describe('OpenAICompatibleBackend', () => {
     it('includes stop sequence for NO_COMPLETION marker', async () => {
       fetchStub.returns(successResponse('x'));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
       await backend.complete(makeRequest(), makeToken());
 
       const body = JSON.parse(fetchStub.firstCall.args[1].body);
@@ -190,7 +196,7 @@ describe('OpenAICompatibleBackend', () => {
       fetchStub.returns(successResponse('x'));
 
       const backend = new OpenAICompatibleBackend(
-        makeConfig({ openaiApiKey: '' })
+        makeConfig({ openaiApiKey: '' }), makeKeyManager()
       );
       await backend.complete(makeRequest(), makeToken());
 
@@ -202,7 +208,7 @@ describe('OpenAICompatibleBackend', () => {
       fetchStub.returns(successResponse('x'));
 
       const backend = new OpenAICompatibleBackend(
-        makeConfig({ openaiApiKey: 'sk-test-key' })
+        makeConfig({ openaiApiKey: 'sk-test-key' }), makeKeyManager('sk-test-key')
       );
       await backend.complete(makeRequest(), makeToken());
 
@@ -214,7 +220,7 @@ describe('OpenAICompatibleBackend', () => {
   describe('error handling', () => {
     it('throws on missing baseUrl', async () => {
       const backend = new OpenAICompatibleBackend(
-        makeConfig({ openaiBaseUrl: '' })
+        makeConfig({ openaiBaseUrl: '' }), makeKeyManager()
       );
 
       await assert.rejects(
@@ -225,7 +231,7 @@ describe('OpenAICompatibleBackend', () => {
 
     it('throws on missing model', async () => {
       const backend = new OpenAICompatibleBackend(
-        makeConfig({ model: '' })
+        makeConfig({ model: '' }), makeKeyManager()
       );
 
       await assert.rejects(
@@ -240,7 +246,7 @@ describe('OpenAICompatibleBackend', () => {
         401
       ));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
 
       await assert.rejects(
         () => backend.complete(makeRequest(), makeToken()),
@@ -254,7 +260,7 @@ describe('OpenAICompatibleBackend', () => {
         500
       ));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
 
       await assert.rejects(
         () => backend.complete(makeRequest(), makeToken()),
@@ -268,7 +274,7 @@ describe('OpenAICompatibleBackend', () => {
         404
       ));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
 
       await assert.rejects(
         () => backend.complete(makeRequest(), makeToken()),
@@ -279,7 +285,7 @@ describe('OpenAICompatibleBackend', () => {
     it('throws on network error', async () => {
       fetchStub.rejects(new TypeError('fetch failed'));
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
 
       await assert.rejects(
         () => backend.complete(makeRequest(), makeToken()),
@@ -290,7 +296,7 @@ describe('OpenAICompatibleBackend', () => {
 
   describe('cancellation', () => {
     it('returns null when already cancelled', async () => {
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
       const result = await backend.complete(makeRequest(), makeToken(true));
 
       assert.equal(result, null);
@@ -311,7 +317,7 @@ describe('OpenAICompatibleBackend', () => {
         },
       } as any;
 
-      const backend = new OpenAICompatibleBackend(makeConfig());
+      const backend = new OpenAICompatibleBackend(makeConfig(), makeKeyManager());
       const promise = backend.complete(makeRequest(), token);
 
       // Simulate cancellation after fetch starts — the abort will cause
@@ -336,7 +342,7 @@ describe('OpenAICompatibleBackend', () => {
     it('uses updated config for subsequent calls', async () => {
       fetchStub.returns(successResponse('x'));
 
-      const backend = new OpenAICompatibleBackend(makeConfig({ model: 'model-a' }));
+      const backend = new OpenAICompatibleBackend(makeConfig({ model: 'model-a' }), makeKeyManager());
       await backend.complete(makeRequest(), makeToken());
 
       let body = JSON.parse(fetchStub.firstCall.args[1].body);

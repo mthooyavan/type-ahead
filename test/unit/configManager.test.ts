@@ -34,7 +34,7 @@ describe('ConfigManager', () => {
     });
 
     it('reads custom settings from VS Code config', () => {
-      setMockConfig('claudeAutocomplete', {
+      setMockConfig('nerdCodeCompletion', {
         enabled: false,
         backend: 'openai-compatible',
         debounceMs: 500,
@@ -55,13 +55,13 @@ describe('ConfigManager', () => {
     });
 
     it('resolves model through Claude priority chain by default', () => {
-      setMockConfig('claudeAutocomplete', { model: 'claude-sonnet-4-6' });
+      setMockConfig('nerdCodeCompletion', { model: 'claude-sonnet-4-6' });
       const config = getConfig();
       assert.equal(config.model, 'claude-sonnet-4-6');
     });
 
     it('trims openaiBaseUrl whitespace', () => {
-      setMockConfig('claudeAutocomplete', {
+      setMockConfig('nerdCodeCompletion', {
         openaiBaseUrl: '  http://localhost:11434/v1  ',
       });
       const config = getConfig();
@@ -132,11 +132,11 @@ describe('ConfigManager', () => {
   });
 
   describe('onConfigChange()', () => {
-    it('calls callback when claudeAutocomplete config changes', () => {
+    it('calls callback when nerdCodeCompletion config changes', () => {
       const callback = sinon.stub();
       const disposable = onConfigChange(callback);
 
-      fireConfigChange('claudeAutocomplete');
+      fireConfigChange('nerdCodeCompletion');
       assert.equal(callback.callCount, 1);
 
       disposable.dispose();
@@ -157,7 +157,7 @@ describe('ConfigManager', () => {
       const disposable = onConfigChange(callback);
 
       disposable.dispose();
-      fireConfigChange('claudeAutocomplete');
+      fireConfigChange('nerdCodeCompletion');
       assert.equal(callback.callCount, 0);
     });
   });

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 const DEFAULT_MODEL = 'claude-haiku-4-5';
-const CONFIG_SECTION = 'claudeAutocomplete';
+const CONFIG_SECTION = 'nerdCodeCompletion';
 
 export type BackendType = 'claude' | 'openai-compatible';
 
@@ -14,6 +14,7 @@ export interface AutocompleteConfig {
   cacheSize: number;
   openaiBaseUrl: string;
   openaiApiKey: string;
+  apiKeyHelper: string;
 }
 
 export function getConfig(): AutocompleteConfig {
@@ -30,6 +31,7 @@ export function getConfig(): AutocompleteConfig {
     cacheSize: config.get<number>('cacheSize', 50),
     openaiBaseUrl: config.get<string>('openaiBaseUrl', '').trim(),
     openaiApiKey: config.get<string>('openaiApiKey', ''),
+    apiKeyHelper: config.get<string>('apiKeyHelper', ''),
   };
 }
 

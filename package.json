@@ -1,9 +1,9 @@
 {
-  "name": "claude-autocomplete",
-  "displayName": "Claude Autocomplete",
-  "description": "Inline code autocomplete powered by Claude, using Claude Code's existing configuration",
-  "version": "0.1.0",
-  "publisher": "anthropic-community",
+  "name": "nerd-code-completion",
+  "displayName": "Nerd Code Completion",
+  "description": "Inline code autocomplete powered by Claude or any OpenAI-compatible LLM (Ollama, vLLM, LM Studio, etc.)",
+  "version": "0.2.0",
+  "publisher": "nerd-community",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -17,14 +17,14 @@
   "main": "./dist/extension.js",
   "contributes": {
     "configuration": {
-      "title": "Claude Autocomplete",
+      "title": "Nerd Code Completion",
       "properties": {
-        "claudeAutocomplete.enabled": {
+        "nerdCodeCompletion.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable or disable Claude inline autocomplete"
+          "description": "Enable or disable inline autocomplete"
         },
-        "claudeAutocomplete.backend": {
+        "nerdCodeCompletion.backend": {
           "type": "string",
           "default": "claude",
           "enum": ["claude", "openai-compatible"],
@@ -34,36 +34,41 @@
           ],
           "description": "Which backend to use for completions"
         },
-        "claudeAutocomplete.model": {
+        "nerdCodeCompletion.model": {
           "type": "string",
           "default": "",
           "description": "Model name. For Claude: empty uses ANTHROPIC_SMALL_FAST_MODEL or claude-haiku-4-5. For openai-compatible: required (e.g., 'codellama:7b', 'deepseek-coder:6.7b')"
         },
-        "claudeAutocomplete.openaiBaseUrl": {
+        "nerdCodeCompletion.openaiBaseUrl": {
           "type": "string",
           "default": "",
           "description": "Base URL for OpenAI-compatible API. Required when backend is 'openai-compatible'. Examples: http://localhost:11434/v1 (Ollama), http://localhost:8000/v1 (vLLM)"
         },
-        "claudeAutocomplete.openaiApiKey": {
+        "nerdCodeCompletion.openaiApiKey": {
           "type": "string",
           "default": "",
-          "description": "Optional API key for the OpenAI-compatible server. Leave empty for local servers like Ollama that need no auth"
+          "description": "Static API key for the OpenAI-compatible server. Overridden by apiKeyHelper if set. Leave empty for local servers like Ollama"
         },
-        "claudeAutocomplete.debounceMs": {
+        "nerdCodeCompletion.apiKeyHelper": {
+          "type": "string",
+          "default": "",
+          "description": "Shell command that outputs an API key on stdout (e.g., 'my-tool get-api-key'). Used by openai-compatible backend. Overrides openaiApiKey when set. Key is generated on IDE open and refreshed on auth errors."
+        },
+        "nerdCodeCompletion.debounceMs": {
           "type": "number",
           "default": 300,
           "minimum": 100,
           "maximum": 2000,
           "description": "Debounce delay in milliseconds before triggering completion"
         },
-        "claudeAutocomplete.contextLines": {
+        "nerdCodeCompletion.contextLines": {
           "type": "number",
           "default": 100,
           "minimum": 10,
           "maximum": 500,
           "description": "Number of lines of context before and after cursor to include"
         },
-        "claudeAutocomplete.cacheSize": {
+        "nerdCodeCompletion.cacheSize": {
           "type": "number",
           "default": 50,
           "minimum": 0,
@@ -74,8 +79,8 @@
     },
     "commands": [
       {
-        "command": "claudeAutocomplete.toggle",
-        "title": "Claude Autocomplete: Toggle On/Off"
+        "command": "nerdCodeCompletion.toggle",
+        "title": "Nerd Code Completion: Toggle On/Off"
       }
     ]
   },

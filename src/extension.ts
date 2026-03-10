@@ -4,24 +4,26 @@ import { CompletionBackend } from './backend/types';
 import { ClaudeAgentBackend } from './backend/claudeAgentBackend';
 import { OpenAICompatibleBackend } from './backend/openaiCompatibleBackend';
 import { ClaudeCompletionProvider } from './completionProvider';
+import { ApiKeyManager } from './auth/apiKeyManager';
 
 let provider: ClaudeCompletionProvider | null = null;
 let currentBackend: CompletionBackend | null = null;
 let currentBackendType: string | null = null;
+let keyManager: ApiKeyManager | null = null;
 
-export function createBackend(config: AutocompleteConfig): CompletionBackend {
+export function createBackend(config: AutocompleteConfig, apiKeyManager: ApiKeyManager): CompletionBackend {
   if (config.backend === 'openai-compatible') {
     if (!config.openaiBaseUrl) {
       vscode.window.showErrorMessage(
-        'Claude Autocomplete: "openaiBaseUrl" is required when backend is "openai-compatible". Please set it in settings.'
+        'Nerd Code Completion: "openaiBaseUrl" is required when backend is "openai-compatible". Please set it in settings.'
       );
     }
     if (!config.model) {
       vscode.window.showErrorMessage(
-        'Claude Autocomplete: "model" is required when backend is "openai-compatible". Please set it in settings.'
+        'Nerd Code Completion: "model" is required when backend is "openai-compatible". Please set it in settings.'
       );
     }
-    return new OpenAICompatibleBackend(config);
+    return new OpenAICompatibleBackend(config, apiKeyManager);
   }
   return new ClaudeAgentBackend(config);
 }
@@ -29,7 +31,15 @@ export function createBackend(config: AutocompleteConfig): CompletionBackend {
 export function activate(context: vscode.ExtensionContext): void {
   const config = getConfig();
 
-  currentBackend = createBackend(config);
+  // Create API key manager and eagerly generate key at session start
+  keyManager = new ApiKeyManager(config.apiKeyHelper, config.openaiApiKey);
+  if (config.backend === 'openai-compatible' && config.apiKeyHelper) {
+    keyManager.warmUp().catch((err) => {
+      console.error('Nerd Code Completion: failed to warm up API key', err);
+    });
+  }
+
+  currentBackend = createBackend(config, keyManager);
   currentBackendType = config.backend;
   provider = new ClaudeCompletionProvider(currentBackend, config);
 
@@ -42,13 +52,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Toggle command
   const toggleCommand = vscode.commands.registerCommand(
-    'claudeAutocomplete.toggle',
+    'nerdCodeCompletion.toggle',
     async () => {
-      const vsConfig = vscode.workspace.getConfiguration('claudeAutocomplete');
+      const vsConfig = vscode.workspace.getConfiguration('nerdCodeCompletion');
       const current = vsConfig.get<boolean>('enabled', true);
       await vsConfig.update('enabled', !current, vscode.ConfigurationTarget.Global);
       vscode.window.showInformationMessage(
-        `Claude Autocomplete: ${!current ? 'Enabled' : 'Disabled'}`
+        `Nerd Code Completion: ${!current ? 'Enabled' : 'Disabled'}`
       );
     }
   );
@@ -58,16 +68,29 @@ export function activate(context: vscode.ExtensionContext): void {
   const configWatcher = onConfigChange(() => {
     const newConfig = getConfig();
 
+    // Update key manager config
+    if (keyManager) {
+      keyManager.updateConfig(newConfig.apiKeyHelper, newConfig.openaiApiKey);
+    }
+
     if (newConfig.backend !== currentBackendType) {
       // Backend type changed — swap backend on the existing registered provider
-      currentBackend = createBackend(newConfig);
+      currentBackend = createBackend(newConfig, keyManager!);
       currentBackendType = newConfig.backend;
 
       if (provider) {
-        provider.setBackend(currentBackend); // disposes old backend internally
+        provider.setBackend(currentBackend);
         provider.updateConfig(newConfig);
       }
-      console.log(`Claude Autocomplete: switched to ${newConfig.backend} backend`);
+
+      // Warm up key for new openai-compatible backend
+      if (newConfig.backend === 'openai-compatible' && newConfig.apiKeyHelper && keyManager) {
+        keyManager.warmUp().catch((err) => {
+          console.error('Nerd Code Completion: failed to warm up API key', err);
+        });
+      }
+
+      console.log(`Nerd Code Completion: switched to ${newConfig.backend} backend`);
     } else {
       // Same backend — just update config
       if (provider) {
@@ -80,7 +103,7 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   context.subscriptions.push(configWatcher);
 
-  console.log(`Claude Autocomplete: activated (${config.backend} backend)`);
+  console.log(`Nerd Code Completion: activated (${config.backend} backend)`);
 }
 
 export function deactivate(): void {
@@ -88,7 +111,11 @@ export function deactivate(): void {
     provider.dispose();
     provider = null;
   }
+  if (keyManager) {
+    keyManager.dispose();
+    keyManager = null;
+  }
   currentBackend = null;
   currentBackendType = null;
-  console.log('Claude Autocomplete: deactivated');
+  console.log('Nerd Code Completion: deactivated');
 }

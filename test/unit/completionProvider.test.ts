@@ -26,6 +26,7 @@ function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteCo
     cacheSize: 50,
     openaiBaseUrl: '',
     openaiApiKey: '',
+    apiKeyHelper: '',
     ...overrides,
   };
 }

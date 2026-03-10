@@ -3,6 +3,7 @@ import { CompletionBackend, CompletionRequest } from './types';
 import { buildPrompt, COMPLETION_SYSTEM_PROMPT } from '../prompt/promptBuilder';
 import { postProcess } from '../prompt/postProcessor';
 import { AutocompleteConfig } from '../config/configManager';
+import { ApiKeyManager } from '../auth/apiKeyManager';
 
 interface OpenAIChatResponse {
   choices?: Array<{
@@ -17,20 +18,23 @@ interface OpenAIChatResponse {
 
 export class OpenAICompatibleBackend implements CompletionBackend {
   private config: AutocompleteConfig;
+  private keyManager: ApiKeyManager;
 
-  constructor(config: AutocompleteConfig) {
+  constructor(config: AutocompleteConfig, keyManager: ApiKeyManager) {
     this.config = config;
+    this.keyManager = keyManager;
   }
 
   updateConfig(config: AutocompleteConfig): void {
     this.config = config;
+    this.keyManager.updateConfig(config.apiKeyHelper, config.openaiApiKey);
   }
 
   async complete(
     request: CompletionRequest,
     token: vscode.CancellationToken
   ): Promise<string | null> {
-    const { openaiBaseUrl, openaiApiKey, model } = this.config;
+    const { openaiBaseUrl, model } = this.config;
 
     if (!openaiBaseUrl) {
       throw new Error('openaiBaseUrl is required when using openai-compatible backend');
@@ -63,14 +67,7 @@ export class OpenAICompatibleBackend implements CompletionBackend {
       });
 
       const url = `${openaiBaseUrl.replace(/\/+$/, '')}/chat/completions`;
-      console.log(`Claude Autocomplete: POST ${url} (model: ${model})`);
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (openaiApiKey) {
-        headers['Authorization'] = `Bearer ${openaiApiKey}`;
-      }
+      console.log(`Nerd Code Completion: POST ${url} (model: ${model})`);
 
       const body = JSON.stringify({
         model,
@@ -83,15 +80,22 @@ export class OpenAICompatibleBackend implements CompletionBackend {
         stop: ['<NO_COMPLETION/>'],
       });
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body,
-        signal: abortController.signal,
-      });
+      // First attempt
+      let response = await this.doFetch(url, body, abortController.signal);
 
       if (token.isCancellationRequested) {
         return null;
+      }
+
+      // On 401/403, refresh key and retry once
+      if (response.status === 401 || response.status === 403) {
+        console.log('Nerd Code Completion: auth error, refreshing API key...');
+        await this.keyManager.refreshKey();
+        response = await this.doFetch(url, body, abortController.signal);
+
+        if (token.isCancellationRequested) {
+          return null;
+        }
       }
 
       if (!response.ok) {
@@ -117,7 +121,25 @@ export class OpenAICompatibleBackend implements CompletionBackend {
     }
   }
 
+  private async doFetch(url: string, body: string, signal: AbortSignal): Promise<Response> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    const apiKey = await this.keyManager.getKey();
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    return fetch(url, {
+      method: 'POST',
+      headers,
+      body,
+      signal,
+    });
+  }
+
   dispose(): void {
-    // No persistent resources
+    this.keyManager.dispose();
   }
 }
