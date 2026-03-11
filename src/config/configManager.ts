@@ -18,6 +18,7 @@ export interface AutocompleteConfig {
   apiKeyHelper: string;
   excludePatterns: string[];
   customInstructions: string;
+  litellmAnthropicResponse: boolean;
 }
 
 export function getConfig(): AutocompleteConfig {
@@ -38,6 +39,7 @@ export function getConfig(): AutocompleteConfig {
     apiKeyHelper: config.get<string>('apiKeyHelper', ''),
     excludePatterns: config.get<string[]>('excludePatterns', []),
     customInstructions: config.get<string>('customInstructions', '').trim(),
+    litellmAnthropicResponse: config.get<boolean>('litellmAnthropicResponse', false),
   };
 }
 

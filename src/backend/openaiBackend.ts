@@ -10,6 +10,11 @@ interface OpenAIChatResponse {
       content?: string;
     };
   }>;
+  // Anthropic-format response (used when litellmAnthropicResponse is true)
+  content?: Array<{
+    type?: string;
+    text?: string;
+  }>;
 }
 
 export class OpenAIBackend implements CompletionBackend {
@@ -40,16 +45,37 @@ export class OpenAIBackend implements CompletionBackend {
       const prompt = buildPrompt(request);
       const url = `${apiBaseUrl.replace(/\/+$/, '')}/chat/completions`;
 
-      const body = JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: request.systemPrompt },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.2,
-        max_tokens: 256,
-        stop: ['<NO_COMPLETION/>'],
-      });
+      const useAnthropicFormat = this.config.backend === 'litellm' && this.config.litellmAnthropicResponse;
+
+      let requestBody: Record<string, unknown>;
+
+      if (useAnthropicFormat) {
+        // Anthropic format: system is top-level, not a message role
+        requestBody = {
+          model,
+          system: request.systemPrompt,
+          messages: [
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.2,
+          max_tokens: 256,
+          stop_sequences: ['<NO_COMPLETION/>'],
+        };
+      } else {
+        // OpenAI format: system is a message role
+        requestBody = {
+          model,
+          messages: [
+            { role: 'system', content: request.systemPrompt },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.2,
+          max_tokens: 256,
+          stop: ['<NO_COMPLETION/>'],
+        };
+      }
+
+      const body = JSON.stringify(requestBody);
 
       console.log(`Type Ahead: [llm] POST ${url} (model: ${model})`);
       const startTime = Date.now();
@@ -73,7 +99,18 @@ export class OpenAIBackend implements CompletionBackend {
       }
 
       const data = (await response.json()) as OpenAIChatResponse;
-      const content = data.choices?.[0]?.message?.content;
+
+      // Parse response — support both OpenAI and Anthropic formats
+      let content: string | undefined;
+      if (this.config.backend === 'litellm' && this.config.litellmAnthropicResponse) {
+        // Anthropic format: content[0].text
+        const textBlock = data.content?.find((c) => c.type === 'text');
+        content = textBlock?.text;
+      } else {
+        // OpenAI format: choices[0].message.content
+        content = data.choices?.[0]?.message?.content;
+      }
+
       if (!content) {
         console.log('Type Ahead: [llm] empty completion returned');
         return null;

@@ -72,6 +72,11 @@
           "editPresentation": "multilineText",
           "description": "Custom instructions appended to the system prompt sent to the LLM (e.g., 'Always use TypeScript strict types', 'Prefer functional programming patterns')"
         },
+        "typeAhead.litellmAnthropicResponse": {
+          "type": "boolean",
+          "default": false,
+          "description": "When using the LiteLLM backend, parse responses in Anthropic format (content[0].text) instead of OpenAI format (choices[0].message.content). Enable this when LiteLLM is configured to return native Anthropic responses."
+        },
         "typeAhead.debounceMs": {
           "type": "number",
           "default": 300,

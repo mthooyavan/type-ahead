@@ -28,6 +28,7 @@ function makeConfig(overrides: Partial<AutocompleteConfig> = {}): AutocompleteCo
     apiKeyHelper: '',
     excludePatterns: [],
     customInstructions: '',
+    litellmAnthropicResponse: false,
     ...overrides,
   };
 }
